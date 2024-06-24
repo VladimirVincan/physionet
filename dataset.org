@@ -1,4 +1,9 @@
 * Dataset
+** Size
+Audio 30sec: 16000 * 30 = 480 000
+EEG 8h: 200 * 8 * 60 * 60 = 5 760 000
+Average EEG input is more than 12 times longer than audio input
+
 ** Columns
 1) F3-M2
 2) F4-M1
