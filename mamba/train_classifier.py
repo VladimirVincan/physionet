@@ -1,14 +1,26 @@
 #!/usr/bin/env python3
-
+import glob
 import os
 import sys
-import glob
-import numpy as np
-import physionetchallenge2018_lib as phyc
-import matplotlib
-import joblib
 
+import joblib
+import matplotlib
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils.data import DataLoader, Dataset
+from torch.utils.tensorboard import SummaryWriter
+from torchsummary import summary
+
+import physionetchallenge2018_lib as phyc
+from ConvFeatureExtractionModel import ConvFeatureExtractionModel
+from PhysionetDataset import PhysionetDataset
 from ssm import StateSpaceModel
+
+writer = SummaryWriter(log_dir='./log')
+
 
 def find(condition):
     res, = np.nonzero(np.ravel(condition))
@@ -60,17 +72,6 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
 train.writer_step=0
 
 def preprocess_record(record_name):
-    header_file = record_name + '.hea'
-    signal_file = record_name + '.mat'
-    arousal_file = record_name + '-arousal.mat'
-
-    # Get the signal names from the header file
-    signal_names, Fs, n_samples = phyc.import_signal_names(header_file)
-    signal_names = list(np.append(signal_names, 'arousals'))
-
-    # Convert this subject's data into a pandas dataframe
-    this_data = phyc.get_subject_data(arousal_file, signal_file, signal_names)
-
     # ----------------------------------------------------------------------
     # Generate the Features for the classificaition model - variance of SaO2
     # ----------------------------------------------------------------------
@@ -85,17 +86,23 @@ def preprocess_record(record_name):
     torch.manual_seed(42)
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    model = StateSpaceModel()
-    summary(model, (8*60*60*200, ))
+    # model = StateSpaceModel()
+    feature_enc_layers = "[(1024, 1, 1)]"
+    feature_enc_layers = eval(feature_enc_layers)
+    model = ConvFeatureExtractionModel(feature_enc_layers, mode='layer_norm')
+    model.to(device)
 
-    train_dataset = AudioDataset()
+    # batch, length, dimension
+    summary(model, (8*60*60*200, 13), batch_size=1, device='cuda')
+
+    train_dataset = PhysionetDataset('/home/bici/physionet/challenge-2018/training')
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
     print('Train Loader length: ' + str(len(train_loader)))
 
     epochs = 100
 
-    optimizer = optim.AdamW(parameters)
-    criterion = nn.BCELoss.to(device)
+    optimizer = optim.AdamW(model.parameters())
+    criterion = nn.BCELoss #.to(device)
     scheduler = optim.lr_scheduler.OneCycleLR(
         optimizer,
         max_lr = 1e-4,
@@ -107,14 +114,14 @@ def preprocess_record(record_name):
     iter_meter = IterMeter()
     for epoch in range(1, epochs + 1):
         train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter)
-        test(model, device, test_loader, criterion, epoch, iter_meter)
+        # test(model, device, test_loader, criterion, epoch, iter_meter)
         writer.flush()
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # Save this algorithm for submission to Physionet Challenge:
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     model_file = 'models/%s_model.pkl' % os.path.basename(record_name)
-    joblib.dump(my_classifier, model_file)
+    # joblib.dump(my_classifier, model_file)
 
 def finish():
     pass
@@ -122,5 +129,6 @@ def finish():
 if __name__ == '__main__':
     init()
     # train()
+    record = '../challenge-2018/training/tr03-0005/tr03-0005'
     preprocess_record(record)
     # finish()

@@ -2,4 +2,8 @@ challenge-2018
 training
 test
 sample/__pycache__/*
+mamba/__pycache__/*
+log/*
+mamba/log/*
 ~*
+
