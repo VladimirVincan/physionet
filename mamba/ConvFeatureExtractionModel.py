@@ -51,7 +51,7 @@ class ConvFeatureExtractionModel(nn.Module):
             else:
                 pass
 
-        in_d = 1
+        in_d = 13
         self.conv_layers = nn.ModuleList()
         for i, cl in enumerate(conv_layers):
             assert len(cl) == 3, "invalid conv definition: " + str(cl)
@@ -73,8 +73,8 @@ class ConvFeatureExtractionModel(nn.Module):
     def forward(self, x):
 
         # BxT -> BxCxT
-        print(x.shape)
-        x = x.unsqueeze(1)
+        x = x.transpose(-1, -2)
+        # x = x.unsqueeze(1)
 
         for conv in self.conv_layers:
             print(x.shape)
