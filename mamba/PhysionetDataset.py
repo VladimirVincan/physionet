@@ -14,11 +14,12 @@ class PhysionetDataset(Dataset):
         self.listdir = os.listdir(dir)
 
     def __len__(self):
+        return 1
         return 994  # train
         return 989  # test
 
     def __getitem__(self, idx):
-        record_name = os.path.join(self.dir, self.listdir[idx])
+        record_name = os.path.join(self.dir, self.listdir[idx], self.listdir[idx])
 
         header_file = record_name + '.hea'
         signal_file = record_name + '.mat'
@@ -35,6 +36,6 @@ class PhysionetDataset(Dataset):
         arousals = this_data.get(['arousals']).values
 
         input_signals = torch.Tensor(input_signals.values)
-        arousals = torch.Tensor(arousals.values)
+        arousals = torch.Tensor(arousals)
 
         return input_signals, arousals

@@ -53,12 +53,20 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
 
     for batch_idx, _data in enumerate(train_loader):
         audio_inputs, labels = _data
+        audio_inputs = audio_inputs.to(device)
+        # print(device)
+        # print('is cuda?')
+        # print(audio_inputs.is_cuda)
 
         optimizer.zero_grad()
 
         outputs = model(audio_inputs)
 
         # print(outputs.shape)
+        print(outputs)
+        print(labels)
+        print(outputs.shape)
+        print(labels.shape)
         loss = criterion(outputs, labels)
         # print('train loss', loss)
         print('batch idx: ' + str(batch_idx))
@@ -87,16 +95,17 @@ def preprocess_record(record_name):
     torch.manual_seed(42)
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    # model = StateSpaceModel()
-    feature_enc_layers = "[(1024, 13, 1)]"
+    model = StateSpaceModel()
+    feature_enc_layers = "[(32, 1, 1)]"
     feature_enc_layers = eval(feature_enc_layers)
-    model = ConvFeatureExtractionModel(feature_enc_layers, mode='layer_norm')
+    # model = ConvFeatureExtractionModel(feature_enc_layers, mode='layer_norm')
     model.to(device)
 
     # batch, length, dimension
     summary(model, (1, 8*60*60*200, 13), device='cuda')
 
     train_dataset = PhysionetDataset('/home/bici/physionet/challenge-2018/training')
+    # train_dataset = PhysionetDataset()
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
     print('Train Loader length: ' + str(len(train_loader)))
 
