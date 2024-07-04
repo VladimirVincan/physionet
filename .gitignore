@@ -6,4 +6,5 @@ mamba/__pycache__/*
 log/*
 mamba/log/*
 ~*
+login.sh
 

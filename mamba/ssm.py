@@ -8,12 +8,12 @@ from ConvFeatureExtractionModel import ConvFeatureExtractionModel
 
 
 class StateSpaceModel(nn.Module):
-    def __init__(self):
+    def __init__(self, feature_enc_layers, feature_mamba_layers):
         super().__init__()
 
 
         # feature_enc_layers = "[(1024, 4, 1)] + [(1024, 3, 1)] + [(1024,2,1)]"
-        feature_enc_layers = "[(1024, 1, 1)]"
+        # feature_enc_layers = "[(32, 1, 1)]"
         feature_enc_layers = eval(feature_enc_layers)
         self.feature_extractor = ConvFeatureExtractionModel(
             conv_layers=feature_enc_layers,
@@ -24,7 +24,7 @@ class StateSpaceModel(nn.Module):
 
         # TODO: add layer norm and post_extract_proj
 
-        feature_mamba_layers = "[(1024) * 4]"  # TODO
+        # feature_mamba_layers = "[(32)]"  # TODO
         feature_mamba_layers = eval(feature_mamba_layers)
         self.mamba_encoder = MambaEncoder(feature_mamba_layers)
 
@@ -32,9 +32,7 @@ class StateSpaceModel(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, source):
-        print(source.shape)
         source = source.squeeze(1)
-        print(source.shape)
         features = self.feature_extractor(source)
         features = features.transpose(1, 2)
         features = self.mamba_encoder(features)

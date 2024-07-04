@@ -75,13 +75,9 @@ class ConvFeatureExtractionModel(nn.Module):
         # BxT -> BxCxT
         x = x.transpose(-1, -2)
         # x = x.unsqueeze(1)
-        print('forward enter')
-        print(x.shape)
 
         for conv in self.conv_layers:
             x = conv(x)
-            print('inside for loop')
-            print(x.shape)
 
         return x
 
