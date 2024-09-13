@@ -61,6 +61,7 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
 
         outputs = model(audio_inputs)
 
+        # TODO: don't add negative values to loss
         # negative values -> zero
         labels = torch.clamp(labels, min=0)
         loss = criterion(outputs, labels)
@@ -78,13 +79,13 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
         # pass
 train.writer_step=0
 
-def test(model, device, test_loader, criterion, epoch, iter_meter):
+def validate(model, device, val_loader, criterion, epoch, iter_meter):
     model.eval()
     test_loss = 0
 
     score = Challenge2018Score()
     with torch.no_grad():
-        for batch_idx, _data in enumerate(test_loader):
+        for batch_idx, _data in enumerate(val_loader):
             audio_inputs, labels = _data
             audio_inputs = audio_inputs.to(device)
             labels = labels.to(device)
@@ -102,7 +103,6 @@ def test(model, device, test_loader, criterion, epoch, iter_meter):
             auprc = score.record_auprc(record_name)
             print(' AUROC:%f AUPRC:%f' % (auroc, auprc))
 
-    print()
     auroc_g = score.gross_auroc()
     auprc_g = score.gross_auprc()
     print('Training AUROC Performance (gross): %f' % auroc_g)
@@ -110,39 +110,46 @@ def test(model, device, test_loader, criterion, epoch, iter_meter):
     writer.add_scalar('auroc/test', auroc_g, epoch)
     writer.add_scalar('auprc/test', auprc_g, epoch)
 
-def preprocess_record(model_name):
-    # ----------------------------------------------------------------------
-    # Generate the Features for the classificaition model - variance of SaO2
-    # ----------------------------------------------------------------------
+def main(model_name):
+    init()
 
-    # For the baseline, let's only look at how SaO2 might predict arousals
-
-
-    # ---------------------------------------------------------------------
-    # Train a (multi-class) Logistic Regression classifier
-    # ---------------------------------------------------------------------
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(42)
     device = torch.device("cuda" if use_cuda else "cpu")
 
+    print('-------------------------- STARTING -------------------------\n', flush=True)
     feature_enc_layers = "[(32, 1, 1)]"
     feature_mamba_layers = "[(32)]"  # TODO
     # feature_enc_layers = eval(feature_enc_layers)
+    print('-------------------------- MODEL -------------------------\n', flush=True)
     model = StateSpaceModel(feature_enc_layers, feature_mamba_layers)
     # model = ConvFeatureExtractionModel(feature_enc_layers, mode='layer_norm')
+    print('-------------------------- CUDA -------------------------\n', flush=True)
     model.to(device)
+    # record = '../challenge-2018/training/tr03-0005/tr03-0005'
 
     # batch, length, dimension
+    print('-------------------------- SUMMARY -------------------------\n', flush=True)
+    # TODO: check https://discuss.pytorch.org/t/why-does-the-size-of-forward-backward-pass-differ-when-using-a-single-class-for-a-model-and-partitioning-the-model-using-different-classes-and-later-accumulating-it/185294
     summary(model, (1, 8*60*60*200, 13), device='cuda')
 
     # train_dataset = PhysionetDataset('/home/bici/physionet/challenge-2018/training')
     # train_dataset = PhysionetDataset()
-    train_dataset = PhysionetPreloadDataset('/data/physionet/challenge-2018/training')
+    print('-------------------------- TRAIN -------------------------\n', flush=True)
+    train_dataset = PhysionetPreloadDataset('/data/physionet/dataset/train')
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
-    print('Train Loader length: ' + str(len(train_loader)))
+
+    print('-------------------------- VAL -------------------------\n', flush=True)
+    val_dataset = PhysionetPreloadDataset('/data/physionet/dataset/val')
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=True)
+
+    print('-------------------------- LOADER LENGTH -------------------------\n', flush=True)
+    print('Train Loader length: ' + str(len(train_loader)), flush=True)
+    print('Val Loader length: ' + str(len(val_loader)), flush=True)
 
     epochs = 100
 
+    print('-------------------------- OPT CRI SCH -------------------------\n', flush=True)
     optimizer = optim.AdamW(model.parameters())
     criterion = nn.BCELoss() #.to(device)
     scheduler = optim.lr_scheduler.OneCycleLR(
@@ -154,15 +161,18 @@ def preprocess_record(model_name):
         anneal_strategy='linear'
     )
 
+    print('-------------------------- EPOCHS -------------------------\n', flush=True)
     iter_meter = IterMeter()
     for epoch in range(1, epochs + 1):
-        print('============ EPOCH: ' + str(epoch) + ' ============')
+        print('============ EPOCH: ' + str(epoch) + ' ============', flush=True)
         train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter)
+        validate(model, device, val_loader, criterion, epoch, iter_meter)
+    joblib.dump(model, model_name)
+    writer.flush()
 
     print('============ TESTING ============')
-    test_dataset = PhysionetDataset('/data/physionet/challenge-2018/training')
+    test_dataset = PhysionetDataset('/data/physionet/data/test')
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
-    test(model, device, test_loader, criterion, epoch, iter_meter)
     writer.flush()
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -170,14 +180,8 @@ def preprocess_record(model_name):
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # model_file = 'models/%s_model.pkl' % os.path.basename(record_name)
     joblib.dump(model, model_name)
+    writer.close()
 
-def finish():
-    pass
 
 if __name__ == '__main__':
-    init()
-    # train()
-    # record = '../challenge-2018/training/tr03-0005/tr03-0005'
-    preprocess_record('test_model')
-    # finish()
-    writer.close()
+    main('test_model')

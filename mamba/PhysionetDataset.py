@@ -50,7 +50,7 @@ class PhysionetPreloadDataset(Dataset):
         self.input_signals = []
         self.arousals = []
 
-        print('------------- STARTING DATASET LOAD ------------')
+        print('------------- STARTING DATASET LOAD ------------\n')
         start = time.time()
         for idx, folder_name in enumerate(self.listdir):
 
@@ -74,12 +74,12 @@ class PhysionetPreloadDataset(Dataset):
             self.arousals.append(torch.Tensor(arousals))
 
         end = time.time()
-        print('Finished loading dataset in ' + str(end-start))
+        print('Finished loading dataset in ' + str(end-start) + ' time \n')
 
     def __len__(self):
-        # return 1
-        return 994  # train
-        return 989  # test
+        return len(self.listdir)
+        # return 994  # train
+        # return 989  # test
 
     def __getitem__(self, idx):
         return self.input_signals[idx], self.arousals[idx]
