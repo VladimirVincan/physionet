@@ -113,6 +113,7 @@ def main():
     init()
 
     config_file = 'mamba/config_fmle.yaml'
+    config_file = 'mamba/config_local.yaml'
     with open(config_file, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
@@ -131,8 +132,6 @@ def main():
     # model = ConvFeatureExtractionModel(feature_enc_layers, mode='layer_norm')
     print('-------------------------- CUDA -------------------------\n', flush=True)
     model.to(device)
-    joblib.dump(model, config['model_name'])
-    exit()
     # record = '../challenge-2018/training/tr03-0005/tr03-0005'
 
     # batch, length, dimension
@@ -180,11 +179,11 @@ def main():
     )
 
     print('-------------------------- EPOCHS -------------------------\n', flush=True)
-    iter_meter = IterMeter()
-    for epoch in range(1, epochs + 1):
-        print('============ EPOCH: ' + str(epoch) + ' ============', flush=True)
-        train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter, writer)
-        validate(model, device, val_loader, criterion, epoch, iter_meter, writer)
+    # iter_meter = IterMeter()
+    # for epoch in range(1, epochs + 1):
+    #     print('============ EPOCH: ' + str(epoch) + ' ============', flush=True)
+    #     train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter, writer)
+    #     validate(model, device, val_loader, criterion, epoch, iter_meter, writer)
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # Save this algorithm for submission to Physionet Challenge:
@@ -196,6 +195,8 @@ def main():
     print('============ TESTING ============')
     test_dataset = PhysionetDataset(config['test_dataset'])
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+    validate(model, device, test_loader, criterion, epoch, iter_meter, writer)
+
     writer.flush()
 
 

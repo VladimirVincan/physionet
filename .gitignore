@@ -5,6 +5,11 @@ sample/__pycache__/*
 mamba/__pycache__/*
 log/*
 mamba/log/*
+*.csv
+test_model
+tensorboard/*
+*.pdf
+dataset/*
 ~*
 login.sh
 
