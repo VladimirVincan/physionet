@@ -1,0 +1,5 @@
+train_dataset: "dataset/train"
+val_dataset: "dataset/val"
+test_dataset: "dataset/test"
+summary_writer: "tensorboard"
+model_name: "test_model"

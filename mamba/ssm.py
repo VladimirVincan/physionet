@@ -18,7 +18,6 @@ class StateSpaceModel(nn.Module):
         self.feature_extractor = ConvFeatureExtractionModel(
             conv_layers=feature_enc_layers,
             dropout=0.0,
-            mode='layer_norm',
             conv_bias=True,
         )
 

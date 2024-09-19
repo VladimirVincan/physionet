@@ -9,13 +9,10 @@ class ConvFeatureExtractionModel(nn.Module):
         self,
         conv_layers: list[tuple[int, int, int]],
         dropout: float = 0.0,
-        mode: str = "default",
         conv_bias: bool = False,
     ):
 
         super().__init__()
-
-        assert mode in {"default", "layer_norm"}
 
         def block(
             n_in,
@@ -23,7 +20,6 @@ class ConvFeatureExtractionModel(nn.Module):
             k,
             stride,
             is_layer_norm=False,
-            is_group_norm=False,
             conv_bias=False,
         ):
             def make_conv():
@@ -31,25 +27,16 @@ class ConvFeatureExtractionModel(nn.Module):
                 nn.init.kaiming_normal_(conv.weight)
                 return conv
 
-            assert (
-                is_layer_norm and is_group_norm
-            ) == False, "layer norm and group norm are exclusive"
-
-            if is_layer_norm:
-                return nn.Sequential(
-                    make_conv(),
-                    nn.Dropout(p=dropout),
-                    nn.Sequential(
-                        TransposeLast(),
-                        Fp32LayerNorm(dim, elementwise_affine=True),
-                        TransposeLast(),
-                    ),
-                    nn.GELU(),
-                )
-            elif is_group_norm:
-                pass
-            else:
-                pass
+            return nn.Sequential(
+                make_conv(),
+                nn.Dropout(p=dropout),
+                nn.Sequential(
+                    TransposeLast(),
+                    Fp32LayerNorm(dim, elementwise_affine=True),
+                    TransposeLast(),
+                ),
+                nn.GELU(),
+            )
 
         in_d = 13
         self.conv_layers = nn.ModuleList()
@@ -63,8 +50,6 @@ class ConvFeatureExtractionModel(nn.Module):
                     dim,
                     k,
                     stride,
-                    is_layer_norm=mode == "layer_norm",
-                    is_group_norm=mode == "default" and i == 0,
                     conv_bias=conv_bias,
                 )
             )

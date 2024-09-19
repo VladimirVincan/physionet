@@ -2,26 +2,25 @@
 import glob
 import os
 import sys
+import time
 
 import joblib
 import numpy as np
-import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import yaml
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
 # from torchsummary import summary
 from torchinfo import summary
 
 import physionetchallenge2018_lib as phyc
-from score2018 import Challenge2018Score
 from ConvFeatureExtractionModel import ConvFeatureExtractionModel
 from PhysionetDataset import PhysionetDataset, PhysionetPreloadDataset
+from score2018 import Challenge2018Score
 from ssm import StateSpaceModel
-
-writer = SummaryWriter(log_dir='/out/in')
 
 
 def find(condition):
@@ -48,7 +47,7 @@ def init():
     for f in glob.glob('models/*_model.pkl'):
         os.remove(f)
 
-def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter):
+def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter, writer):
     model.train()
     # data_len = len(train_loader.dataset)
 
@@ -79,7 +78,7 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
         # pass
 train.writer_step=0
 
-def validate(model, device, val_loader, criterion, epoch, iter_meter):
+def validate(model, device, val_loader, criterion, epoch, iter_meter, writer):
     model.eval()
     test_loss = 0
 
@@ -110,8 +109,14 @@ def validate(model, device, val_loader, criterion, epoch, iter_meter):
     writer.add_scalar('auroc/test', auroc_g, epoch)
     writer.add_scalar('auprc/test', auprc_g, epoch)
 
-def main(model_name):
+def main():
     init()
+
+    config_file = 'mamba/config_fmle.yaml'
+    with open(config_file, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+
+    writer = SummaryWriter(log_dir=config['summary_writer'])
 
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(42)
@@ -126,21 +131,34 @@ def main(model_name):
     # model = ConvFeatureExtractionModel(feature_enc_layers, mode='layer_norm')
     print('-------------------------- CUDA -------------------------\n', flush=True)
     model.to(device)
+    joblib.dump(model, config['model_name'])
+    exit()
     # record = '../challenge-2018/training/tr03-0005/tr03-0005'
 
     # batch, length, dimension
     print('-------------------------- SUMMARY -------------------------\n', flush=True)
     # TODO: check https://discuss.pytorch.org/t/why-does-the-size-of-forward-backward-pass-differ-when-using-a-single-class-for-a-model-and-partitioning-the-model-using-different-classes-and-later-accumulating-it/185294
-    summary(model, (1, 8*60*60*200, 13), device='cuda')
+    summary(model,
+            (1, 8*60*60*200 // 512, 13),
+            device=device,
+            verbose=1,
+            depth=7,
+            col_names=['input_size',
+                       'output_size',
+                       "num_params",
+                       "params_percent",
+                       "kernel_size",
+                       "mult_adds",
+                       "trainable",])
 
     # train_dataset = PhysionetDataset('/home/bici/physionet/challenge-2018/training')
     # train_dataset = PhysionetDataset()
     print('-------------------------- TRAIN -------------------------\n', flush=True)
-    train_dataset = PhysionetPreloadDataset('/data/physionet/dataset/train')
+    train_dataset = PhysionetPreloadDataset(config['train_dataset'])
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
 
     print('-------------------------- VAL -------------------------\n', flush=True)
-    val_dataset = PhysionetPreloadDataset('/data/physionet/dataset/val')
+    val_dataset = PhysionetPreloadDataset(config['val_dataset'])
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=True)
 
     print('-------------------------- LOADER LENGTH -------------------------\n', flush=True)
@@ -165,23 +183,21 @@ def main(model_name):
     iter_meter = IterMeter()
     for epoch in range(1, epochs + 1):
         print('============ EPOCH: ' + str(epoch) + ' ============', flush=True)
-        train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter)
-        validate(model, device, val_loader, criterion, epoch, iter_meter)
-    joblib.dump(model, model_name)
-    writer.flush()
-
-    print('============ TESTING ============')
-    test_dataset = PhysionetDataset('/data/physionet/data/test')
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
-    writer.flush()
+        train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter, writer)
+        validate(model, device, val_loader, criterion, epoch, iter_meter, writer)
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # Save this algorithm for submission to Physionet Challenge:
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # model_file = 'models/%s_model.pkl' % os.path.basename(record_name)
-    joblib.dump(model, model_name)
-    writer.close()
+    print('-------------------------- SAVE MODEL -------------------------\n', flush=True)
+    joblib.dump(model, config['model_name'])
+    writer.flush()
+
+    print('============ TESTING ============')
+    test_dataset = PhysionetDataset(config['test_dataset'])
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+    writer.flush()
 
 
 if __name__ == '__main__':
-    main('test_model')
+    main()
