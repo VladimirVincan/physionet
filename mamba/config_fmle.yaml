@@ -1,5 +1,5 @@
 train_dataset: "/data/physionet/dataset/train"
 val_dataset: "/data/physionet/dataset/val"
-test_dataset: "/data/physionet/data/test"
+test_dataset: "/data/physionet/dataset/test"
 summary_writer: "/out/tensorboard"
 model_name: "/out/test_model"

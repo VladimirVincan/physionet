@@ -78,9 +78,8 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
         # pass
 train.writer_step=0
 
-def validate(model, device, val_loader, criterion, epoch, iter_meter, writer):
+def validate(model, device, val_loader, epoch, writer):
     model.eval()
-    test_loss = 0
 
     score = Challenge2018Score()
     with torch.no_grad():
@@ -108,6 +107,35 @@ def validate(model, device, val_loader, criterion, epoch, iter_meter, writer):
     print('Training AUPRC Performance (gross): %f' % auprc_g)
     writer.add_scalar('auroc/test', auroc_g, epoch)
     writer.add_scalar('auprc/test', auprc_g, epoch)
+
+def test(model, device, test_loader):
+    model.eval()
+
+    score = Challenge2018Score()
+    with torch.no_grad():
+        for batch_idx, _data in enumerate(test_loader):
+            audio_inputs, labels = _data
+            audio_inputs = audio_inputs.to(device)
+            labels = labels.to(device)
+
+            outputs = model(audio_inputs)
+
+            record_name = str(batch_idx)
+
+            outputs = outputs.cpu().detach().numpy()
+            labels = labels.cpu().detach().numpy()
+            outputs = np.squeeze(outputs)
+            labels = np.squeeze(labels)
+            score.score_record(labels, outputs, record_name)
+            auroc = score.record_auroc(record_name)
+            auprc = score.record_auprc(record_name)
+            print(' AUROC:%f AUPRC:%f' % (auroc, auprc))
+
+    auroc_g = score.gross_auroc()
+    auprc_g = score.gross_auprc()
+    print('Training AUROC Performance (gross): %f' % auroc_g)
+    print('Training AUPRC Performance (gross): %f' % auprc_g)
+
 
 def main():
     init()
@@ -179,11 +207,11 @@ def main():
     )
 
     print('-------------------------- EPOCHS -------------------------\n', flush=True)
-    # iter_meter = IterMeter()
-    # for epoch in range(1, epochs + 1):
-    #     print('============ EPOCH: ' + str(epoch) + ' ============', flush=True)
-    #     train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter, writer)
-    #     validate(model, device, val_loader, criterion, epoch, iter_meter, writer)
+    iter_meter = IterMeter()
+    for epoch in range(1, epochs + 1):
+        print('============ EPOCH: ' + str(epoch) + ' ============', flush=True)
+        train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter, writer)
+        validate(model, device, val_loader, epoch, writer)
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # Save this algorithm for submission to Physionet Challenge:
@@ -195,7 +223,7 @@ def main():
     print('============ TESTING ============')
     test_dataset = PhysionetDataset(config['test_dataset'])
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
-    validate(model, device, test_loader, criterion, epoch, iter_meter, writer)
+    test(model, device, test_loader)
 
     writer.flush()
 
