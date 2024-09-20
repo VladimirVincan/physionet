@@ -15,9 +15,9 @@ class PhysionetDataset(Dataset):
         self.listdir = os.listdir(dir)
 
     def __len__(self):
-        # return 1
-        return 994  # train
-        return 989  # test
+        return len(self.listdir)
+        # return 994  # train
+        # return 989  # test
 
     def __getitem__(self, idx):
         record_name = os.path.join(self.dir, self.listdir[idx], self.listdir[idx])

@@ -157,7 +157,7 @@ def main():
     # feature_enc_layers = eval(feature_enc_layers)
     print('-------------------------- MODEL -------------------------\n', flush=True)
     model = StateSpaceModel(feature_enc_layers, feature_mamba_layers)
-    # model = ConvFeatureExtractionModel(feature_enc_layers, mode='layer_norm')
+    # model = ConvFeatureExtractionModel(feature_enc_layers)
     print('-------------------------- CUDA -------------------------\n', flush=True)
     model.to(device)
     # record = '../challenge-2018/training/tr03-0005/tr03-0005'
@@ -166,7 +166,7 @@ def main():
     print('-------------------------- SUMMARY -------------------------\n', flush=True)
     # TODO: check https://discuss.pytorch.org/t/why-does-the-size-of-forward-backward-pass-differ-when-using-a-single-class-for-a-model-and-partitioning-the-model-using-different-classes-and-later-accumulating-it/185294
     summary(model,
-            (1, 8*60*60*200 // 512, 13),
+            (1, 8*60*60*200, 13),
             device=device,
             verbose=1,
             depth=7,
@@ -178,8 +178,6 @@ def main():
                        "mult_adds",
                        "trainable",])
 
-    # train_dataset = PhysionetDataset('/home/bici/physionet/challenge-2018/training')
-    # train_dataset = PhysionetDataset()
     print('-------------------------- TRAIN -------------------------\n', flush=True)
     train_dataset = PhysionetPreloadDataset(config['train_dataset'])
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
@@ -221,6 +219,7 @@ def main():
     writer.flush()
 
     print('============ TESTING ============')
+    # Using PhysionetDataset instead of PhysionetPreloadDataset to reduce the memory consumption
     test_dataset = PhysionetDataset(config['test_dataset'])
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
     test(model, device, test_loader)
