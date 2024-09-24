@@ -152,6 +152,10 @@ def main():
     device = torch.device("cuda" if use_cuda else "cpu")
 
     print('-------------------------- STARTING -------------------------\n', flush=True)
+    # [(x, y, z)]:
+    # x - out channels
+    # y - kernel size
+    # z - stride
     feature_enc_layers = "[(32, 1, 1)]"
     feature_mamba_layers = "[(32)]"  # TODO
     # feature_enc_layers = eval(feature_enc_layers)
@@ -163,24 +167,30 @@ def main():
     # record = '../challenge-2018/training/tr03-0005/tr03-0005'
 
     # batch, length, dimension
-    print('-------------------------- SUMMARY -------------------------\n', flush=True)
-    # TODO: check https://discuss.pytorch.org/t/why-does-the-size-of-forward-backward-pass-differ-when-using-a-single-class-for-a-model-and-partitioning-the-model-using-different-classes-and-later-accumulating-it/185294
-    summary(model,
-            (1, 8*60*60*200, 13),
-            device=device,
-            verbose=1,
-            depth=7,
-            col_names=['input_size',
-                       'output_size',
-                       "num_params",
-                       "params_percent",
-                       "kernel_size",
-                       "mult_adds",
-                       "trainable",])
+    # print('-------------------------- SUMMARY -------------------------\n', flush=True)
+    # # TODO: check https://discuss.pytorch.org/t/why-does-the-size-of-forward-backward-pass-differ-when-using-a-single-class-for-a-model-and-partitioning-the-model-using-different-classes-and-later-accumulating-it/185294
+    # summary(model,
+    #         (1, 8*60*60*200, 13),
+    #         device=device,
+    #         verbose=1,
+    #         depth=7,
+    #         col_names=['input_size',
+    #                    'output_size',
+    #                    "num_params",
+    #                    "params_percent",
+    #                    "kernel_size",
+    #                    "mult_adds",
+    #                    "trainable",])
 
     print('-------------------------- TRAIN -------------------------\n', flush=True)
     train_dataset = PhysionetPreloadDataset(config['train_dataset'])
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+
+    all_labels = [train_dataset[i][1] for i in range(len(train_dataset))]
+    all_labels = all_labels[1]
+    mask = all_labels != -1
+    all_labels = all_labels[mask]
+    unique_labels, counts = torch.unique(all_labels, return_counts=True)
 
     print('-------------------------- VAL -------------------------\n', flush=True)
     val_dataset = PhysionetPreloadDataset(config['val_dataset'])
@@ -194,7 +204,7 @@ def main():
 
     print('-------------------------- OPT CRI SCH -------------------------\n', flush=True)
     optimizer = optim.AdamW(model.parameters())
-    criterion = nn.BCELoss() #.to(device)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=10.0) #.to(device)
     scheduler = optim.lr_scheduler.OneCycleLR(
         optimizer,
         max_lr = 1e-5,

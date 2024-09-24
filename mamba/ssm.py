@@ -28,7 +28,8 @@ class StateSpaceModel(nn.Module):
         self.mamba_encoder = MambaEncoder(feature_mamba_layers)
 
         self.decoder = nn.Linear(in_features=feature_mamba_layers[-1], out_features=1)
-        self.sigmoid = nn.Sigmoid()
+        # Do not put Sigmoid non-linearity, due to BCEWithLogitsLoss
+        # self.sigmoid = nn.Sigmoid()
 
     def forward(self, source):
         source = source.squeeze(1)
@@ -37,7 +38,7 @@ class StateSpaceModel(nn.Module):
         features = self.mamba_encoder(features)
         # features = self.layer_norm(features)
         features = self.decoder(features)
-        features = self.sigmoid(features)
+        # features = self.sigmoid(features)
 
         return features
 
