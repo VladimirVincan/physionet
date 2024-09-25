@@ -73,7 +73,8 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
         optimizer.step()
         scheduler.step()
         end = time.time()
-        print('batch : ' + str(batch_idx) + ' duration : ' + str(end-start) + ' time : ' + str(end))
+        # print('batch : ' + str(batch_idx) + ' duration : ' + str(end-start) + ' time : ' + str(end))
+        # print('batch : ' + str(batch_idx) + ' duration : ' + str(end-start))
         writer.add_scalar('time/batch', end-start, train.writer_step)
         # pass
 train.writer_step=0
@@ -89,6 +90,8 @@ def validate(model, device, val_loader, epoch, writer):
             labels = labels.to(device)
 
             outputs = model(audio_inputs)
+            sigmoid = torch.nn.Sigmoid()
+            outputs = sigmoid(outputs)
 
             record_name = str(batch_idx)
 
@@ -96,6 +99,7 @@ def validate(model, device, val_loader, epoch, writer):
             labels = labels.cpu().detach().numpy()
             outputs = np.squeeze(outputs)
             labels = np.squeeze(labels)
+
             score.score_record(labels, outputs, record_name)
             auroc = score.record_auroc(record_name)
             auprc = score.record_auprc(record_name)
@@ -119,6 +123,8 @@ def test(model, device, test_loader):
             labels = labels.to(device)
 
             outputs = model(audio_inputs)
+            sigmoid = torch.nn.Sigmoid()
+            outputs = sigmoid(outputs)
 
             record_name = str(batch_idx)
 
@@ -126,6 +132,7 @@ def test(model, device, test_loader):
             labels = labels.cpu().detach().numpy()
             outputs = np.squeeze(outputs)
             labels = np.squeeze(labels)
+
             score.score_record(labels, outputs, record_name)
             auroc = score.record_auroc(record_name)
             auprc = score.record_auprc(record_name)
@@ -141,7 +148,7 @@ def main():
     init()
 
     config_file = 'mamba/config_fmle.yaml'
-    config_file = 'mamba/config_local.yaml'
+    # config_file = 'mamba/config_local.yaml'
     with open(config_file, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
@@ -204,7 +211,7 @@ def main():
 
     print('-------------------------- OPT CRI SCH -------------------------\n', flush=True)
     optimizer = optim.AdamW(model.parameters())
-    criterion = nn.BCEWithLogitsLoss(pos_weight=10.0) #.to(device)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([10.0])).to(device)
     scheduler = optim.lr_scheduler.OneCycleLR(
         optimizer,
         max_lr = 1e-5,
