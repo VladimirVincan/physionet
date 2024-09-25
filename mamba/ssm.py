@@ -4,6 +4,7 @@ import torch.nn as nn
 from fairseq.modules import LayerNorm
 from mamba_ssm import Mamba
 
+from BiMamba import BiMambaEncoder
 from ConvFeatureExtractionModel import ConvFeatureExtractionModel
 
 
@@ -57,15 +58,20 @@ class MambaEncoder(nn.Module):
 
             self.mamba_layers.extend(
                 [
-                    Mamba(
+                    # Mamba(
+                    #     d_model=dim,
+                    #     d_state=8,
+                    #     d_conv=4,
+                    #     expand=2,
+                    # ),
+                    BiMambaEncoder(
                         d_model=dim,
-                        d_state=8,
-                        d_conv=4,
-                        expand=2,
+                        n_state=8,
                     ),
                     LayerNorm(dim)
                 ]
             )  # .to('cuda')  # TODO: .to('cuda')
+
 
     def forward(self, x):
 
