@@ -19,6 +19,7 @@ from torchinfo import summary
 import physionetchallenge2018_lib as phyc
 from ConvFeatureExtractionModel import ConvFeatureExtractionModel
 from PhysionetDataset import PhysionetDataset, PhysionetPreloadDataset
+from PointFiveFourModel import PointFiveFourModel
 from score2018 import Challenge2018Score
 from ssm import StateSpaceModel
 
@@ -26,6 +27,11 @@ from ssm import StateSpaceModel
 def find(condition):
     res, = np.nonzero(np.ravel(condition))
     return res
+
+def create_mask(labels):
+    mask = labels != -1
+    labels = labels[mask]
+    return mask
 
 class IterMeter(object):
     """keeps track of total iterations"""
@@ -59,11 +65,12 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
         optimizer.zero_grad()
 
         outputs = model(audio_inputs)
+        mask = create_mask(labels)
 
         # TODO: don't add negative values to loss
         # negative values -> zero
-        labels = torch.clamp(labels, min=0)
-        loss = criterion(outputs, labels)
+        outputs = outputs[:, :labels.shape[1], :]
+        loss = criterion(outputs[mask], labels[mask])
         # print('train loss', loss)
         writer.add_scalar('Loss/train', loss, train.writer_step)
         writer.add_scalar('LR', scheduler.get_last_lr()[0], train.writer_step)
@@ -90,6 +97,7 @@ def validate(model, device, val_loader, epoch, writer):
             labels = labels.to(device)
 
             outputs = model(audio_inputs)
+            outputs = outputs[:, :labels.shape[1], :]
             sigmoid = torch.nn.Sigmoid()
             outputs = sigmoid(outputs)
 
@@ -148,7 +156,7 @@ def main():
     init()
 
     config_file = 'mamba/config_fmle.yaml'
-    # config_file = 'mamba/config_local.yaml'
+    config_file = 'mamba/config_local.yaml'
     with open(config_file, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
@@ -163,11 +171,12 @@ def main():
     # x - out channels
     # y - kernel size
     # z - stride
-    feature_enc_layers = "[(32, 1, 1)]"
-    feature_mamba_layers = "[(32)]"  # TODO
+    feature_enc_layers = "[(2, 1, 1)]"
+    feature_mamba_layers = "[(2)]"  # TODO
     # feature_enc_layers = eval(feature_enc_layers)
     print('-------------------------- MODEL -------------------------\n', flush=True)
     model = StateSpaceModel(feature_enc_layers, feature_mamba_layers)
+    model = PointFiveFourModel(13)
     # model = ConvFeatureExtractionModel(feature_enc_layers)
     print('-------------------------- CUDA -------------------------\n', flush=True)
     model.to(device)
@@ -176,28 +185,29 @@ def main():
     # batch, length, dimension
     # print('-------------------------- SUMMARY -------------------------\n', flush=True)
     # # TODO: check https://discuss.pytorch.org/t/why-does-the-size-of-forward-backward-pass-differ-when-using-a-single-class-for-a-model-and-partitioning-the-model-using-different-classes-and-later-accumulating-it/185294
-    # summary(model,
-    #         (1, 8*60*60*200, 13),
-    #         device=device,
-    #         verbose=1,
-    #         depth=7,
-    #         col_names=['input_size',
-    #                    'output_size',
-    #                    "num_params",
-    #                    "params_percent",
-    #                    "kernel_size",
-    #                    "mult_adds",
-    #                    "trainable",])
+    summary(model,
+            (1, 8*60*60*200, 13),
+            device=device,
+            verbose=1,
+            depth=1,
+            col_names=['input_size',
+                       'output_size',
+                       "num_params",
+                       "params_percent",
+                       "kernel_size",
+                       "mult_adds",
+                       "trainable",])
 
     print('-------------------------- TRAIN -------------------------\n', flush=True)
     train_dataset = PhysionetPreloadDataset(config['train_dataset'])
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
 
-    all_labels = [train_dataset[i][1] for i in range(len(train_dataset))]
-    all_labels = all_labels[1]
-    mask = all_labels != -1
-    all_labels = all_labels[mask]
-    unique_labels, counts = torch.unique(all_labels, return_counts=True)
+    # all_labels = [train_dataset[i][1] for i in range(len(train_dataset))]
+    # all_labels = all_labels[1]
+    # mask = all_labels != -1
+    # all_labels = all_labels[mask]
+    # unique_labels, counts = torch.unique(all_labels, return_counts=True)
+    # mask = mask.unsqueeze(0)
 
     print('-------------------------- VAL -------------------------\n', flush=True)
     val_dataset = PhysionetPreloadDataset(config['val_dataset'])

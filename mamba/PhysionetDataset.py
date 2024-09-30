@@ -133,8 +133,12 @@ class PhysionetDataset(Dataset):
         input_signals = this_data.loc[:, this_data.columns!='arousals']
         arousals = this_data.get(['arousals']).values
 
-        # normalize
+        # Normalize
         input_signals = normalize_dataset(input_signals)
+
+        # Convert to 32 bits
+        input_signals = input_signals.astype(np.float32)
+        arousals = arousals.astype(np.float32)
 
         input_signals = torch.Tensor(input_signals.values)
         arousals = torch.Tensor(arousals)
@@ -166,12 +170,17 @@ class PhysionetPreloadDataset(Dataset):
 
             # Convert this subject's data into a pandas dataframe
             this_data = phyc.get_subject_data(arousal_file, signal_file, signal_names)
+            # this_data = this_data.iloc[:100001, :]
 
             input_signals = this_data.loc[:, this_data.columns!='arousals']
             arousals = this_data.get(['arousals']).values
 
-            # normalize
+            # Normalize
             input_signals = normalize_dataset(input_signals)
+
+            # Convert to 32 bits
+            input_signals = input_signals.astype(np.float32)
+            arousals = arousals.astype(np.float32)
 
             self.input_signals.append(torch.Tensor(input_signals.values))
             self.arousals.append(torch.Tensor(arousals))
