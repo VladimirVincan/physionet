@@ -3,6 +3,7 @@ import time
 
 import numpy as np
 import pandas as pd
+import scipy
 import torch
 from torch.utils.data import Dataset
 
@@ -135,6 +136,11 @@ class PhysionetDataset(Dataset):
 
         # Normalize
         input_signals = normalize_dataset(input_signals)
+
+        # Low pass
+        b, a = scipy.signal.iirfilter(4, Wn=25.0, fs=200, btype="low", ftype="butter")
+        for label, signal in input_signals.items():
+            input_signals[label] = scipy.signal.filtfilt(b, a, signal)  # TODO: filfilt or lfilter?
 
         # Convert to 32 bits
         input_signals = input_signals.astype(np.float32)
