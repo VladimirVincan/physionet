@@ -322,8 +322,8 @@ class PointFiveFourModel(nn.Module):
         # Downsampling to 1 entity per second
         x = self.dsMod1(x)
         x = Functional.max_pool1d(x, kernel_size=2, ceil_mode=True)
-        x = self.dsMod2(x)
-        x = Functional.max_pool1d(x, kernel_size=4, ceil_mode=True)
+        # x = self.dsMod2(x)
+        # x = Functional.max_pool1d(x, kernel_size=4, ceil_mode=True)
         x = self.dsMod3(x)
         x = Functional.max_pool1d(x, kernel_size=5, ceil_mode=True)
         x = self.dsMod4(x)

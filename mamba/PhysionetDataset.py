@@ -108,16 +108,20 @@ def normalize_dataset(input_signals):
 
 
 class PhysionetDataset(Dataset):
-    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training'):
+    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1):
         self.dir = dir
         self.listdir = os.listdir(dir)
+        self.stride = stride
 
     def __len__(self):
-        return len(self.listdir)
+        return len(self.listdir) * self.stride
         # return 994  # train
         # return 989  # test
 
     def __getitem__(self, idx):
+        start = idx % self.stride
+        idx = idx // self.stride
+
         record_name = os.path.join(self.dir, self.listdir[idx], self.listdir[idx])
 
         header_file = record_name + '.hea'
@@ -145,6 +149,13 @@ class PhysionetDataset(Dataset):
         # Convert to 32 bits
         input_signals = input_signals.astype(np.float32)
         arousals = arousals.astype(np.float32)
+        print(input_signals)
+        print(arousals)
+
+        # Sample every nth row (stride)
+        if self.stride > 1:
+            input_signals = input_signals.iloc[start::self.stride, :]
+            arousals = arousals[start::self.stride, :]
 
         input_signals = torch.Tensor(input_signals.values)
         arousals = torch.Tensor(arousals)

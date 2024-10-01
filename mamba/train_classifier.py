@@ -186,23 +186,23 @@ def main():
     # batch, length, dimension
     # print('-------------------------- SUMMARY -------------------------\n', flush=True)
     # # TODO: check https://discuss.pytorch.org/t/why-does-the-size-of-forward-backward-pass-differ-when-using-a-single-class-for-a-model-and-partitioning-the-model-using-different-classes-and-later-accumulating-it/185294
-    summary(model,
-            (1, 8*60*60*200, 13),
-            device=device,
-            verbose=1,
-            depth=1,
-            col_names=['input_size',
-                       'output_size',
-                       "num_params",
-                       "params_percent",
-                       "kernel_size",
-                       "mult_adds",
-                       "trainable",])
+    # summary(model,
+    #         (1, 8*60*60*200, 13),
+    #         device=device,
+    #         verbose=1,
+    #         depth=1,
+    #         col_names=['input_size',
+    #                    'output_size',
+    #                    "num_params",
+    #                    "params_percent",
+    #                    "kernel_size",
+    #                    "mult_adds",
+    #                    "trainable",])
 
     print('-------------------------- TRAIN -------------------------\n', flush=True)
     # train_dataset = PhysionetPreloadDataset(config['train_dataset'])
-    train_dataset = PhysionetDataset(config['train_dataset'])
-    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+    train_dataset = PhysionetDataset(config['train_dataset'], 4)
+    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
 
     # all_labels = [train_dataset[i][1] for i in range(len(train_dataset))]
     # all_labels = all_labels[1]
@@ -213,8 +213,8 @@ def main():
 
     print('-------------------------- VAL -------------------------\n', flush=True)
     # val_dataset = PhysionetPreloadDataset(config['val_dataset'])
-    val_dataset = PhysionetDataset(config['val_dataset'])
-    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=True)
+    val_dataset = PhysionetDataset(config['val_dataset'], 4)
+    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=True)
 
     print('-------------------------- LOADER LENGTH -------------------------\n', flush=True)
     print('Train Loader length: ' + str(len(train_loader)), flush=True)
