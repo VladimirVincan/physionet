@@ -157,6 +157,7 @@ def main():
 
     config_file = 'mamba/config_fmle.yaml'
     config_file = 'mamba/config_local.yaml'
+    config_file = 'mamba/config.yaml'
     with open(config_file, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
@@ -171,12 +172,12 @@ def main():
     # x - out channels
     # y - kernel size
     # z - stride
-    feature_enc_layers = "[(2, 1, 1)]"
-    feature_mamba_layers = "[(2)]"  # TODO
+    feature_enc_layers = "[(32, 1, 1)]"
+    feature_mamba_layers = "[(32)]"  # TODO
     # feature_enc_layers = eval(feature_enc_layers)
     print('-------------------------- MODEL -------------------------\n', flush=True)
-    model = StateSpaceModel(feature_enc_layers, feature_mamba_layers)
     model = PointFiveFourModel(13)
+    model = StateSpaceModel(feature_enc_layers, feature_mamba_layers)
     # model = ConvFeatureExtractionModel(feature_enc_layers)
     print('-------------------------- CUDA -------------------------\n', flush=True)
     model.to(device)
@@ -199,7 +200,8 @@ def main():
                        "trainable",])
 
     print('-------------------------- TRAIN -------------------------\n', flush=True)
-    train_dataset = PhysionetPreloadDataset(config['train_dataset'])
+    # train_dataset = PhysionetPreloadDataset(config['train_dataset'])
+    train_dataset = PhysionetDataset(config['train_dataset'])
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
 
     # all_labels = [train_dataset[i][1] for i in range(len(train_dataset))]
@@ -210,21 +212,22 @@ def main():
     # mask = mask.unsqueeze(0)
 
     print('-------------------------- VAL -------------------------\n', flush=True)
-    val_dataset = PhysionetPreloadDataset(config['val_dataset'])
+    # val_dataset = PhysionetPreloadDataset(config['val_dataset'])
+    val_dataset = PhysionetDataset(config['val_dataset'])
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=True)
 
     print('-------------------------- LOADER LENGTH -------------------------\n', flush=True)
     print('Train Loader length: ' + str(len(train_loader)), flush=True)
     print('Val Loader length: ' + str(len(val_loader)), flush=True)
 
-    epochs = 100
+    epochs = 500
 
     print('-------------------------- OPT CRI SCH -------------------------\n', flush=True)
     optimizer = optim.AdamW(model.parameters())
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([10.0])).to(device)
     scheduler = optim.lr_scheduler.OneCycleLR(
         optimizer,
-        max_lr = 1e-5,
+        max_lr = 1e-3,
         pct_start = 0.05,
         steps_per_epoch=int(len(train_loader)),
         epochs=epochs,
