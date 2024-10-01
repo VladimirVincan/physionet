@@ -149,8 +149,6 @@ class PhysionetDataset(Dataset):
         # Convert to 32 bits
         input_signals = input_signals.astype(np.float32)
         arousals = arousals.astype(np.float32)
-        print(input_signals)
-        print(arousals)
 
         # Sample every nth row (stride)
         if self.stride > 1:
@@ -164,6 +162,9 @@ class PhysionetDataset(Dataset):
 
 
 class PhysionetPreloadDataset(Dataset):
+    """
+    No need to use anymore since https://discuss.pytorch.org/t/simultaneously-preprocess-a-batch-on-cpu-and-run-forward-backward-on-gpu/161987/2
+    """
     def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training'):
         self.dir = dir
         self.listdir = os.listdir(dir)
@@ -212,3 +213,14 @@ class PhysionetPreloadDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.input_signals[idx], self.arousals[idx]
+
+
+def collate_fn(data: list[tuple[torch.Tensor, torch.Tensor]]):
+    # https://stackoverflow.com/questions/65279115/how-to-use-collate-fn-with-dataloaders
+    # https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pad_sequence.html
+    # https://stackoverflow.com/questions/51030782/why-do-we-pack-the-sequences-in-pytorch
+    tensors, targets = zip(*data)
+    features = torch.nn.utils.rnn.pad_sequence(tensors, batch_first=True)
+    labels = torch.nn.utils.rnn.pad_sequence(targets, batch_first=True, padding_value=-1)
+    return features, labels
+

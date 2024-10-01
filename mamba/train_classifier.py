@@ -18,7 +18,8 @@ from torchinfo import summary
 
 import physionetchallenge2018_lib as phyc
 from ConvFeatureExtractionModel import ConvFeatureExtractionModel
-from PhysionetDataset import PhysionetDataset, PhysionetPreloadDataset
+from PhysionetDataset import (PhysionetDataset, PhysionetPreloadDataset,
+                              collate_fn)
 from PointFiveFourModel import PointFiveFourModel
 from score2018 import Challenge2018Score
 from ssm import StateSpaceModel
@@ -155,8 +156,6 @@ def test(model, device, test_loader):
 def main():
     init()
 
-    config_file = 'mamba/config_fmle.yaml'
-    config_file = 'mamba/config_local.yaml'
     config_file = 'mamba/config.yaml'
     with open(config_file, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
@@ -202,7 +201,7 @@ def main():
     print('-------------------------- TRAIN -------------------------\n', flush=True)
     # train_dataset = PhysionetPreloadDataset(config['train_dataset'])
     train_dataset = PhysionetDataset(config['train_dataset'], 4)
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn, num_workers=4)
 
     # all_labels = [train_dataset[i][1] for i in range(len(train_dataset))]
     # all_labels = all_labels[1]
@@ -214,7 +213,7 @@ def main():
     print('-------------------------- VAL -------------------------\n', flush=True)
     # val_dataset = PhysionetPreloadDataset(config['val_dataset'])
     val_dataset = PhysionetDataset(config['val_dataset'], 4)
-    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn, num_workers=4)
 
     print('-------------------------- LOADER LENGTH -------------------------\n', flush=True)
     print('Train Loader length: ' + str(len(train_loader)), flush=True)
