@@ -170,9 +170,14 @@ class FCNN(nn.Module):
                  depth=3):
         super(FCNN, self).__init__()
         self.layers = nn.ModuleList()
-        for i in range(depth):
-            self.layers += nn.Linear()
+        for i in range(depth-1):
+            self.layers.append(nn.Linear(in_channels, in_channels))
+        self.layers.append(nn.Linear(in_channels, 1))
 
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
 
 class UNet(nn.Module):
@@ -202,5 +207,6 @@ class UNet(nn.Module):
         x = x.permute(0, 2, 1)
         enc_out, routes = self.encoder(x)
         out = self.decoder(enc_out, routes)
+        out = self.fcnn(out)
         out = out.permute(0, 2, 1)
         return out
