@@ -185,7 +185,7 @@ def main():
     # model = PointFiveFourModel(13)
     model = StateSpaceModel(feature_enc_layers, feature_mamba_layers)
     # model = ConvFeatureExtractionModel(feature_enc_layers)
-    # model = UNet(13, 32, 32, [5, 2, 5], 3)
+    model = UNet(13, 32, 32, [5, 2, 5], 3)
     print('-------------------------- CUDA -------------------------\n', flush=True)
     model.to(device)
     # record = '../challenge-2018/training/tr03-0005/tr03-0005'
@@ -206,13 +206,12 @@ def main():
                        "mult_adds",
                        "trainable",])
 
-    # train_dataset = PhysionetPreloadDataset(config['train_dataset'])
     train_dataset = PhysionetDataset(config['train_dataset'], 6)
-    train_loader = DataLoader(train_dataset, batch_size=6, shuffle=True, collate_fn=collate_fn, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=4)
 
-    # val_dataset = PhysionetPreloadDataset(config['val_dataset'])
-    val_dataset = PhysionetDataset(config['val_dataset'], 6)
-    val_loader = DataLoader(val_dataset, batch_size=6, shuffle=True, collate_fn=collate_fn, num_workers=4)
+    # TODO: is batch_size=1 needed?
+    val_dataset = PhysionetDataset(config['val_dataset'])
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=4)
 
     print('-------------------------- LOADER LENGTH -------------------------\n', flush=True)
     print('Train Loader length: ' + str(len(train_loader)), flush=True)
