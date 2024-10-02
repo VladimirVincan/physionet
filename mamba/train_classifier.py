@@ -23,6 +23,7 @@ from PhysionetDataset import (PhysionetDataset, PhysionetPreloadDataset,
 from PointFiveFourModel import PointFiveFourModel
 from score2018 import Challenge2018Score
 from ssm import StateSpaceModel
+from UNet import UNet
 
 
 def find(condition):
@@ -73,8 +74,8 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
         outputs = outputs[:, :labels.shape[1], :]
         loss = criterion(outputs[mask], labels[mask])
         # print('train loss', loss)
-        writer.add_scalar('Loss/train', loss, train.writer_step)
-        writer.add_scalar('LR', scheduler.get_last_lr()[0], train.writer_step)
+        writer.add_scalar('Train/Loss', loss, train.writer_step)
+        writer.add_scalar('Train/LR', scheduler.get_last_lr()[0], train.writer_step)
         train.writer_step += 1
         loss.backward()
 
@@ -83,11 +84,11 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
         end = time.time()
         # print('batch : ' + str(batch_idx) + ' duration : ' + str(end-start) + ' time : ' + str(end))
         # print('batch : ' + str(batch_idx) + ' duration : ' + str(end-start))
-        writer.add_scalar('time/batch', end-start, train.writer_step)
+        writer.add_scalar('Train/batch_time', end-start, train.writer_step)
         # pass
 train.writer_step=0
 
-def validate(model, device, val_loader, epoch, writer):
+def validate(model, device, val_loader, criterion, epoch, writer):
     model.eval()
 
     score = Challenge2018Score()
@@ -99,6 +100,12 @@ def validate(model, device, val_loader, epoch, writer):
 
             outputs = model(audio_inputs)
             outputs = outputs[:, :labels.shape[1], :]
+
+            mask = create_mask(labels)
+            loss = criterion(outputs[mask], labels[mask])
+            writer.add_scalar('Val/Loss', loss, validate.writer_step)
+            validate.writer_step += 1
+
             sigmoid = torch.nn.Sigmoid()
             outputs = sigmoid(outputs)
 
@@ -110,9 +117,9 @@ def validate(model, device, val_loader, epoch, writer):
             labels = np.squeeze(labels)
 
             score.score_record(labels, outputs, record_name)
-            auroc = score.record_auroc(record_name)
-            auprc = score.record_auprc(record_name)
-            print(' AUROC:%f AUPRC:%f' % (auroc, auprc))
+            # auroc = score.record_auroc(record_name)
+            # auprc = score.record_auprc(record_name)
+            # print(' AUROC:%f AUPRC:%f' % (auroc, auprc))
 
     auroc_g = score.gross_auroc()
     auprc_g = score.gross_auprc()
@@ -120,6 +127,7 @@ def validate(model, device, val_loader, epoch, writer):
     print('Training AUPRC Performance (gross): %f' % auprc_g)
     writer.add_scalar('auroc/test', auroc_g, epoch)
     writer.add_scalar('auprc/test', auprc_g, epoch)
+validate.writer_step=0
 
 def test(model, device, test_loader):
     model.eval()
@@ -166,18 +174,18 @@ def main():
     torch.manual_seed(42)
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    print('-------------------------- STARTING -------------------------\n', flush=True)
     # [(x, y, z)]:
     # x - out channels
     # y - kernel size
     # z - stride
-    feature_enc_layers = "[(32, 1, 1)]"
-    feature_mamba_layers = "[(32)]"  # TODO
+    feature_enc_layers = "[(64, 1, 1)]"
+    feature_mamba_layers = "[(64)]"  # TODO
     # feature_enc_layers = eval(feature_enc_layers)
     print('-------------------------- MODEL -------------------------\n', flush=True)
-    model = PointFiveFourModel(13)
+    # model = PointFiveFourModel(13)
     model = StateSpaceModel(feature_enc_layers, feature_mamba_layers)
     # model = ConvFeatureExtractionModel(feature_enc_layers)
+    # model = UNet(13, 32, 32, [5, 2, 5], 3)
     print('-------------------------- CUDA -------------------------\n', flush=True)
     model.to(device)
     # record = '../challenge-2018/training/tr03-0005/tr03-0005'
@@ -185,48 +193,38 @@ def main():
     # batch, length, dimension
     # print('-------------------------- SUMMARY -------------------------\n', flush=True)
     # # TODO: check https://discuss.pytorch.org/t/why-does-the-size-of-forward-backward-pass-differ-when-using-a-single-class-for-a-model-and-partitioning-the-model-using-different-classes-and-later-accumulating-it/185294
-    # summary(model,
-    #         (1, 8*60*60*200, 13),
-    #         device=device,
-    #         verbose=1,
-    #         depth=1,
-    #         col_names=['input_size',
-    #                    'output_size',
-    #                    "num_params",
-    #                    "params_percent",
-    #                    "kernel_size",
-    #                    "mult_adds",
-    #                    "trainable",])
+    summary(model,
+            (1, 100000, 13),
+            device=device,
+            verbose=1,
+            depth=5,
+            col_names=['input_size',
+                       'output_size',
+                       "num_params",
+                       "params_percent",
+                       "kernel_size",
+                       "mult_adds",
+                       "trainable",])
 
-    print('-------------------------- TRAIN -------------------------\n', flush=True)
     # train_dataset = PhysionetPreloadDataset(config['train_dataset'])
-    train_dataset = PhysionetDataset(config['train_dataset'], 4)
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn, num_workers=4)
+    train_dataset = PhysionetDataset(config['train_dataset'], 6)
+    train_loader = DataLoader(train_dataset, batch_size=6, shuffle=True, collate_fn=collate_fn, num_workers=4)
 
-    # all_labels = [train_dataset[i][1] for i in range(len(train_dataset))]
-    # all_labels = all_labels[1]
-    # mask = all_labels != -1
-    # all_labels = all_labels[mask]
-    # unique_labels, counts = torch.unique(all_labels, return_counts=True)
-    # mask = mask.unsqueeze(0)
-
-    print('-------------------------- VAL -------------------------\n', flush=True)
     # val_dataset = PhysionetPreloadDataset(config['val_dataset'])
-    val_dataset = PhysionetDataset(config['val_dataset'], 4)
-    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn, num_workers=4)
+    val_dataset = PhysionetDataset(config['val_dataset'], 6)
+    val_loader = DataLoader(val_dataset, batch_size=6, shuffle=True, collate_fn=collate_fn, num_workers=4)
 
     print('-------------------------- LOADER LENGTH -------------------------\n', flush=True)
     print('Train Loader length: ' + str(len(train_loader)), flush=True)
     print('Val Loader length: ' + str(len(val_loader)), flush=True)
 
-    epochs = 500
+    epochs = 125
 
-    print('-------------------------- OPT CRI SCH -------------------------\n', flush=True)
     optimizer = optim.AdamW(model.parameters())
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([10.0])).to(device)
     scheduler = optim.lr_scheduler.OneCycleLR(
         optimizer,
-        max_lr = 1e-3,
+        max_lr = 4e-3,
         pct_start = 0.05,
         steps_per_epoch=int(len(train_loader)),
         epochs=epochs,
@@ -238,7 +236,7 @@ def main():
     for epoch in range(1, epochs + 1):
         print('============ EPOCH: ' + str(epoch) + ' ============', flush=True)
         train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter, writer)
-        validate(model, device, val_loader, epoch, writer)
+        validate(model, device, val_loader, criterion, epoch, writer)
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # Save this algorithm for submission to Physionet Challenge:
@@ -249,8 +247,8 @@ def main():
 
     print('============ TESTING ============')
     # Using PhysionetDataset instead of PhysionetPreloadDataset to reduce the memory consumption
-    test_dataset = PhysionetDataset(config['test_dataset'])
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+    test_dataset = PhysionetDataset(config['test_dataset'], 6)
+    test_loader = DataLoader(test_dataset, batch_size=6, shuffle=False, collate_fn=collate_fn, num_workers=4)
     test(model, device, test_loader)
 
     writer.flush()
