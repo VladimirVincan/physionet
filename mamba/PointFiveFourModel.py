@@ -220,87 +220,80 @@ class PointFiveFourModel(nn.Module):
             groups=1,
             dilation=1,
             channelNorm=False)
-        self.dsMod4 = SeperableDenseNetUnit(
-            in_channels=((3 * self.channelMultiplier) + 1) * self.numSignals,
-            out_channels=self.channelMultiplier * self.numSignals,
-            kernelSize=(2 * self.kernelSize) + 1,
-            groups=1,
-            dilation=1,
-            channelNorm=False)
 
         # Set up densenet modules
         self.denseMod1 = SeperableDenseNetUnit(
-            in_channels=((4 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((3 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
             dilation=1,
             channelNorm=True)
         self.denseMod2 = SeperableDenseNetUnit(
-            in_channels=((5 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((4 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
             dilation=2,
             channelNorm=True)
         self.denseMod3 = SeperableDenseNetUnit(
-            in_channels=((6 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((5 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
             dilation=4,
             channelNorm=True)
         self.denseMod4 = SeperableDenseNetUnit(
-            in_channels=((7 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((6 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
             dilation=8,
             channelNorm=True)
         self.denseMod5 = SeperableDenseNetUnit(
-            in_channels=((8 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((7 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
             dilation=16,
             channelNorm=True)
         self.denseMod6 = SeperableDenseNetUnit(
-            in_channels=((9 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((8 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
             dilation=32,
             channelNorm=True)
         self.denseMod7 = SeperableDenseNetUnit(
-            in_channels=((10 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((9 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
             dilation=16,
             channelNorm=True)
         self.denseMod8 = SeperableDenseNetUnit(
-            in_channels=((11 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((10 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
             dilation=8,
             channelNorm=True)
         self.denseMod9 = SeperableDenseNetUnit(
-            in_channels=((12 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((11 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
             dilation=4,
             channelNorm=True)
         self.denseMod10 = SeperableDenseNetUnit(
-            in_channels=((13 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((12 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
             dilation=2,
             channelNorm=True)
         self.denseMod11 = SeperableDenseNetUnit(
-            in_channels=((14 * self.channelMultiplier) + 1) * self.numSignals,
+            in_channels=((13 * self.channelMultiplier) + 1) * self.numSignals,
             out_channels=self.channelMultiplier * self.numSignals,
             kernelSize=self.kernelSize,
             groups=1,
@@ -308,7 +301,7 @@ class PointFiveFourModel(nn.Module):
             channelNorm=True)
 
         self.skipLSTM = SkipLSTM(
-            ((15 * self.channelMultiplier) + 1) * self.numSignals,
+            ((14 * self.channelMultiplier) + 1) * self.numSignals,
             hiddenSize=self.channelMultiplier * 64,
             out_channels=1)
 
@@ -316,18 +309,18 @@ class PointFiveFourModel(nn.Module):
         self.skipLSTM.rnn = self.skipLSTM.rnn.cuda(device)
         return super(PointFiveFourModel, self).cuda(device)
 
-    def forward(self, x):
+    def forward(self, x, train=False):
         x = x.permute(0, 2, 1).detach().contiguous()
 
         # Downsampling to 1 entity per second
         x = self.dsMod1(x)
         x = Functional.max_pool1d(x, kernel_size=2, ceil_mode=True)
-        # x = self.dsMod2(x)
-        # x = Functional.max_pool1d(x, kernel_size=4, ceil_mode=True)
+        x = self.dsMod2(x)
+        x = Functional.max_pool1d(x, kernel_size=5, ceil_mode=True)
         x = self.dsMod3(x)
         x = Functional.max_pool1d(x, kernel_size=5, ceil_mode=True)
-        x = self.dsMod4(x)
-        x = Functional.max_pool1d(x, kernel_size=5, ceil_mode=True)
+        # x = self.dsMod4(x)
+        # x = Functional.max_pool1d(x, kernel_size=5, ceil_mode=True)
 
         # Dilated Densenet
         x = self.denseMod1(x)
@@ -348,7 +341,10 @@ class PointFiveFourModel(nn.Module):
 
         # x = torch.exp(x)
         # x = torch.squeeze(x, 0)
-        x = torch.nn.functional.upsample(x, scale_factor=200, mode='linear')
+        if train:
+            x = torch.nn.functional.upsample(x, scale_factor=50, mode='linear')
+        else:
+            x = torch.nn.functional.upsample(x, scale_factor=200, mode='linear')
         # if not(self.training):
         # x2 = torch.exp(x2)
         # x3 = torch.exp(x3)

@@ -221,6 +221,6 @@ def collate_fn(data: list[tuple[torch.Tensor, torch.Tensor]]):
     # https://stackoverflow.com/questions/51030782/why-do-we-pack-the-sequences-in-pytorch
     tensors, targets = zip(*data)
     features = torch.nn.utils.rnn.pad_sequence(tensors, batch_first=True)
-    labels = torch.nn.utils.rnn.pad_sequence(targets, batch_first=True, padding_value=-1)
+    labels = torch.nn.utils.rnn.pad_sequence(targets, batch_first=True, padding_value=-1.0)
     return features, labels
 
