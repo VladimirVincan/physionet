@@ -58,6 +58,7 @@ def init():
 def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, iter_meter, writer):
     model.train()
     # data_len = len(train_loader.dataset)
+    batch_idx = 0
 
     for batch_idx, _data in enumerate(train_loader):
         start = time.time()
@@ -84,8 +85,9 @@ def train(model, device, train_loader, criterion, optimizer, scheduler, epoch, i
         end = time.time()
         # print('batch : ' + str(batch_idx) + ' duration : ' + str(end-start) + ' time : ' + str(end))
         # print('batch : ' + str(batch_idx) + ' duration : ' + str(end-start))
-        writer.add_scalar('Train/batch_time', end-start, train.writer_step)
+        writer.add_scalar('Train/Batch_Time', end-start, train.writer_step)
         # pass
+    writer.add_scalar('Train/Steps_in_Epoch', batch_idx, epoch)
 train.writer_step=0
 
 def validate(model, device, val_loader, criterion, epoch, writer):
@@ -178,14 +180,14 @@ def main():
     # x - out channels
     # y - kernel size
     # z - stride
-    feature_enc_layers = "[(64, 1, 1)]"
-    feature_mamba_layers = "[(64)]"  # TODO
+    feature_enc_layers = "[(128, 1, 1)]"
+    feature_mamba_layers = "[(128)]"  # TODO
     # feature_enc_layers = eval(feature_enc_layers)
     print('-------------------------- MODEL -------------------------\n', flush=True)
     # model = PointFiveFourModel(13)
     model = StateSpaceModel(feature_enc_layers, feature_mamba_layers)
     # model = ConvFeatureExtractionModel(feature_enc_layers)
-    model = UNet(13, 32, 32, [5, 2, 5], 3)
+    # model = UNet(13, 32, 32, [5, 2, 5], 3)
     print('-------------------------- CUDA -------------------------\n', flush=True)
     model.to(device)
     # record = '../challenge-2018/training/tr03-0005/tr03-0005'
@@ -206,8 +208,8 @@ def main():
                        "mult_adds",
                        "trainable",])
 
-    train_dataset = PhysionetDataset(config['train_dataset'], 6)
-    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=4)
+    train_dataset = PhysionetDataset(config['train_dataset'], 16)
+    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn, num_workers=8)
 
     # TODO: is batch_size=1 needed?
     val_dataset = PhysionetDataset(config['val_dataset'])
@@ -246,8 +248,8 @@ def main():
 
     print('============ TESTING ============')
     # Using PhysionetDataset instead of PhysionetPreloadDataset to reduce the memory consumption
-    test_dataset = PhysionetDataset(config['test_dataset'], 6)
-    test_loader = DataLoader(test_dataset, batch_size=6, shuffle=False, collate_fn=collate_fn, num_workers=4)
+    test_dataset = PhysionetDataset(config['test_dataset'])
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=4)
     test(model, device, test_loader)
 
     writer.flush()
