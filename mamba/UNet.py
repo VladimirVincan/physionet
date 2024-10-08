@@ -156,7 +156,8 @@ class Decoder(nn.Module):
             if isinstance(layer, CNNBlocks):
                 # concatenating tensors channel-wise
                 curr_connection = routes_connection.pop(-1)
-                curr_connection = curr_connection[:, :, :x.shape[2]]
+                # curr_connection = curr_connection[:, :, :x.shape[2]]
+                x = x[:, :, :curr_connection.shape[2]]
                 x = torch.cat([x, curr_connection], dim=1)
                 x = layer(x)
             else:
@@ -207,6 +208,6 @@ class UNet(nn.Module):
         x = x.permute(0, 2, 1)
         enc_out, routes = self.encoder(x)
         out = self.decoder(enc_out, routes)
-        out = self.fcnn(out)
         out = out.permute(0, 2, 1)
+        out = self.fcnn(out)
         return out
