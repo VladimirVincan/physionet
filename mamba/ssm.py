@@ -39,7 +39,8 @@ class StateSpaceModel(nn.Module):
         features = self.mamba_encoder(features)
         # features = self.layer_norm(features)
         features = self.decoder(features)
-        # features = self.sigmoid(features)
+        if self.eval:
+            features = self.sigmoid(features)
 
         return features
 

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import torch
-from scipy.signal import fftconvolve
+from scipy.signal import fftconvolve, order_filter
 from torch.utils.data import Dataset
 
 import physionetchallenge2018_lib as phyc
@@ -110,10 +110,13 @@ def normalize_dataset(input_signals):
 
 
 class PhysionetDataset(Dataset):
-    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1):
+    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1, train=True, order=4, Wn=25.0):
         self.dir = dir
         self.listdir = os.listdir(dir)
         self.stride = stride
+        self.train = train
+        self.order = order
+        self.Wn = Wn
 
     def __len__(self):
         return len(self.listdir) * self.stride
@@ -144,7 +147,7 @@ class PhysionetDataset(Dataset):
         input_signals = normalize_dataset(input_signals)
 
         # Low pass
-        b, a = scipy.signal.iirfilter(4, Wn=25.0, fs=200, btype="low", ftype="butter")
+        b, a = scipy.signal.iirfilter(self.order, Wn=self.Wn, fs=200, btype="low", ftype="butter")
         for label, signal in input_signals.items():
             input_signals[label] = scipy.signal.filtfilt(b, a, signal)  # TODO: filfilt or lfilter?
 
@@ -155,7 +158,9 @@ class PhysionetDataset(Dataset):
         # Sample every nth row (stride)
         if self.stride > 1:
             input_signals = input_signals.iloc[start::self.stride, :]
-            arousals = arousals[start::self.stride, :]
+
+            if self.train == True:
+                arousals = arousals[start::self.stride, :]
 
         input_signals = torch.Tensor(input_signals.values)
         arousals = torch.Tensor(arousals)
