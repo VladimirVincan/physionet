@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as Functional
+from BiMamba import BiMambaConcatEncoder
 
 
 ########################################################################################################################
@@ -21,7 +22,6 @@ class Normalizer(nn.Module):
         self.BatchNormBias = nn.Parameter(torch.zeros(1, numChannels, 1))
 
     def forward(self, x):
-
         # Apply channel wise normalization
         if self.channelNorm:
             x = (x - torch.mean(x, dim=1, keepdim=True)) / (
@@ -30,13 +30,15 @@ class Normalizer(nn.Module):
         # If in training mode, update moving per channel statistics
         if self.training:
             newMean = torch.mean(x, dim=2, keepdim=True)
-            self.movingAverage = ((self.momentum * self.movingAverage) +
-                                  ((1 - self.momentum) * newMean)).detach()
+            for i in range(newMean.shape[0]):
+                self.movingAverage = ((self.momentum * self.movingAverage) +
+                                      ((1 - self.momentum) * newMean[i])).detach()
             x = x - self.movingAverage
 
             newVariance = torch.mean(torch.pow(x, 2), dim=2, keepdim=True)
-            self.movingVariance = ((self.momentum * self.movingVariance) + (
-                (1 - self.momentum) * newVariance)).detach()
+            for i in range(newVariance.shape[0]):
+                self.movingVariance = ((self.momentum * self.movingVariance) + (
+                    (1 - self.momentum) * newVariance[i])).detach()
             x = x / (torch.sqrt(self.movingVariance) + 0.00001)
         else:
             x = (x - self.movingAverage) / (torch.sqrt(self.movingVariance) +
@@ -137,6 +139,7 @@ class SkipLSTM(nn.Module):
 
         # Store parameters
         self.in_channels = in_channels
+        self.hidden_channels = hiddenSize
         self.out_channels = out_channels
 
         # Bidirectional LSTM to apply temporally across input channels
@@ -309,7 +312,7 @@ class PointFiveFourModel(nn.Module):
         self.skipLSTM.rnn = self.skipLSTM.rnn.cuda(device)
         return super(PointFiveFourModel, self).cuda(device)
 
-    def forward(self, x, train=False):
+    def forward(self, x):
         x = x.permute(0, 2, 1).detach().contiguous()
 
         # Downsampling to 1 entity per second
@@ -341,10 +344,10 @@ class PointFiveFourModel(nn.Module):
 
         # x = torch.exp(x)
         # x = torch.squeeze(x, 0)
-        if train:
-            x = torch.nn.functional.upsample(x, scale_factor=50, mode='linear')
+        if self.training:
+            x = torch.nn.functional.interpolate(x, scale_factor=50, mode='linear')
         else:
-            x = torch.nn.functional.upsample(x, scale_factor=200, mode='linear')
+            x = torch.nn.functional.interpolate(x, scale_factor=200, mode='linear')
         # if not(self.training):
         # x2 = torch.exp(x2)
         # x3 = torch.exp(x3)
