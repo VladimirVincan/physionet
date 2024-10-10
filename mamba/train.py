@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import glob
 import os
+import csv
 import sys
 import time
+import copy
 
 import joblib
 import numpy as np
@@ -14,6 +16,7 @@ import yaml
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchinfo import summary
+from memory_snapshot import start_record_memory_history, stop_record_memory_history, export_memory_snapshot
 
 import physionetchallenge2018_lib as phyc
 from ConvFeatureExtractionModel import ConvFeatureExtractionModel
@@ -36,10 +39,15 @@ def main():
     with open(config_file, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
+    # Define model
     torch.manual_seed(42)
-    device = torch.device('cpu')
+    device = torch.device(config['summary_device'])
     model = PointFiveFourModel(13)
     model.to(device)
+
+    best_model = copy.deepcopy(model)
+    best_auprc = 0.0
+    best_epoch = 0
 
     summary(model,
             eval(config['summary_shape']),
@@ -72,6 +80,8 @@ def main():
     train_dir = config['train_dataset']
     val_dir = config['val_dataset']
     test_dir = config['test_dataset']
+
+    mem_snapshot_epochs = config['mem_snapshot_epochs']
 
     # Set up DataLoaders
     train_dataset = PhysionetDataset(dir=train_dir,
@@ -127,6 +137,8 @@ def main():
     # Final sigmoid activation
     sigmoid = torch.nn.Sigmoid()
 
+    start_record_memory_history()
+
     # Training and Validation
     for epoch in range(1, epochs + 1):
 
@@ -159,6 +171,11 @@ def main():
                               scheduler.get_last_lr()[0], total_steps)
         writer.add_scalar('Train/Loss', train_loss / len(train_loader), epoch)
         writer.add_scalar('Train/Total_Steps', total_steps, epoch)
+        writer.flush()
+
+        if epoch == mem_snapshot_epochs:
+            stop_record_memory_history()
+            export_memory_snapshot()
 
         print('============ VALIDATE EPOCH: ' + str(epoch) + ' ============')
         with torch.no_grad():
@@ -174,7 +191,7 @@ def main():
 
                 # Measure time during forward propagation
                 start = time.time()
-                outputs = model(inputs)
+                outputs = model(inputs, True)
                 end = time.time()
 
                 # Calculate loss
@@ -209,19 +226,28 @@ def main():
             writer.add_scalar('Validation/Loss',
                               val_loss / len(val_loader), epoch)
 
-    print('-------------------------- SAVE MODEL -------------------------')
-    # Create the 'models' subdirectory and delete any existing model files
-    try:
-        os.mkdir('models')
-    except OSError:
-        pass
-    for f in glob.glob('models/*_model.pkl'):
-        os.remove(f)
+            # save best model
+            if best_auprc < auprc_g:
+                best_auprc = auprc_g
+                best_model = copy.deepcopy(model)
+                best_epoch = epoch
 
-    joblib.dump(model, config['model_name'])
-    writer.flush()
+            writer.flush()
+    writer.close()
+
+    print('-------------------------- SAVE MODEL -------------------------')
+
+    if os.path.exists(config['model_name']):
+        os.remove(config['model_name'])
+    print('best auprc: ' + str(best_auprc))
+    print('best epoch: ' + str(best_epoch))
+    torch.save(best_model.state_dict(), config['model_name'])
 
     print('============ TESTING ============')
+    file = open(config['csv_file'], mode='w', newline='')
+    writer = csv.writer(file)
+    writer.writerow(["Name", "AUPRC", "AUROC"])
+
     with torch.no_grad():
         model.eval()
         score = Challenge2018Score()
@@ -245,12 +271,17 @@ def main():
             for i, (output, label) in enumerate(zip(outputs, labels)):
                 record_name = str(batch_idx) + ' ' + str(i)
                 score.score_record(label, output, record_name)
+                curr_auprc = score.record_auprc(record_name)
+                curr_auroc = score.record_auroc(record_name)
+                writer.writerow([record_name, curr_auprc, curr_auroc])
 
         auroc_g = score.gross_auroc()
         auprc_g = score.gross_auprc()
         print('Testing AUROC Performance (gross): %f' % auroc_g)
         print('Testing AUPRC Performance (gross): %f' % auprc_g)
 
+    file.close()
+    print('Data has been written to the csv file.')
 
 if __name__ == '__main__':
     main()
