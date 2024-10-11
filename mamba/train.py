@@ -64,7 +64,7 @@ def main():
     # Define model
     torch.manual_seed(42)
     device = torch.device(config['summary_device'])
-    model = StateSpaceModel("[(32, 1, 1)]", "5*[(32)]", config['dataloader_stride'])
+    model = StateSpaceModel("[(16, 1, 1)]", "5*[(16)]", config['dataloader_stride'])
     # model = PointFiveFourModel(13)
     model.to(device)
 
@@ -100,6 +100,7 @@ def main():
 
     val_dataset = PhysionetDataset(dir=val_dir,
                                    train=False,
+                                   collate_fn=collate_fn,
                                    stride=dataloader_stride,
                                    order=filter_order,
                                    Wn=filter_Wn)
@@ -110,6 +111,7 @@ def main():
 
     test_dataset = PhysionetDataset(dir=test_dir,
                                     train=False,
+                                    collate_fn=collate_fn,
                                     stride=dataloader_stride,
                                     order=filter_order,
                                     Wn=filter_Wn)
@@ -207,8 +209,8 @@ def main():
                 # Send to CPU
                 outputs = outputs.cpu().detach().numpy()
                 labels = labels.cpu().detach().numpy()
-                outputs = np.squeeze(outputs)
-                labels = np.squeeze(labels)
+                outputs = np.squeeze(outputs, axis=2)
+                labels = np.squeeze(labels, axis=2)
 
                 # Calculate AUPRC
                 # TODO: parallelize
@@ -265,8 +267,8 @@ def main():
             # Send to CPU
             outputs = outputs.cpu().detach().numpy()
             labels = labels.cpu().detach().numpy()
-            outputs = np.squeeze(outputs)
-            labels = np.squeeze(labels)
+            outputs = np.squeeze(outputs, axis=2)
+            labels = np.squeeze(labels, axis=2)
 
             # Calculate AUPRC
             # TODO: parallelize
