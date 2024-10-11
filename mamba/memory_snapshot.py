@@ -27,7 +27,7 @@ def start_record_memory_history() -> None:
 
    logger.info("Starting snapshot record_memory_history")
    torch.cuda.memory._record_memory_history(
-       max_entries=MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT
+       # max_entries=MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT
    )
 
 def stop_record_memory_history() -> None:
@@ -38,7 +38,7 @@ def stop_record_memory_history() -> None:
    logger.info("Stopping snapshot record_memory_history")
    torch.cuda.memory._record_memory_history(enabled=None)
 
-def export_memory_snapshot() -> None:
+def export_memory_snapshot(folder) -> None:
    if not torch.cuda.is_available():
        logger.info("CUDA unavailable. Not exporting memory snapshot")
        return
@@ -46,7 +46,7 @@ def export_memory_snapshot() -> None:
    # Prefix for file names.
    host_name = socket.gethostname()
    timestamp = datetime.now().strftime(TIME_FORMAT_STR)
-   file_prefix = f"{host_name}_{timestamp}"
+   file_prefix = folder + f"{host_name}_{timestamp}"
 
    try:
        logger.info(f"Saving snapshot to local file: {file_prefix}.pickle")

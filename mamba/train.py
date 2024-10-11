@@ -39,10 +39,33 @@ def main():
     with open(config_file, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
+    # Get all parameters
+    epochs = config['epochs']
+    pos_weight = config['pos_weight']
+    max_lr = float(config['max_lr'])
+    warmstart_percentage = config['warmstart_percentage']
+
+    num_workers = config['num_workers']
+    batch_size = config['batch_size']
+    dataloader_stride = config['dataloader_stride']
+
+    filter_Wn = config['filter_Wn']
+    filter_order = config['filter_order']
+
+    train_dir = config['train_dataset']
+    val_dir = config['val_dataset']
+    test_dir = config['test_dataset']
+
+    mem_snapshot_epochs = config['mem_snapshot_epochs']
+
+    if mem_snapshot_epochs > 0:
+        start_record_memory_history()
+
     # Define model
     torch.manual_seed(42)
     device = torch.device(config['summary_device'])
-    model = PointFiveFourModel(13)
+    model = StateSpaceModel("[(32, 1, 1)]", "5*[(32)]", config['dataloader_stride'])
+    # model = PointFiveFourModel(13)
     model.to(device)
 
     best_model = copy.deepcopy(model)
@@ -63,25 +86,6 @@ def main():
                 "mult_adds",
                 "trainable",
             ])
-
-    # Get all parameters
-    epochs = config['epochs']
-    pos_weight = config['pos_weight']
-    max_lr = float(config['max_lr'])
-    warmstart_percentage = config['warmstart_percentage']
-
-    num_workers = config['num_workers']
-    batch_size = config['batch_size']
-    dataloader_stride = config['dataloader_stride']
-
-    filter_Wn = config['filter_Wn']
-    filter_order = config['filter_order']
-
-    train_dir = config['train_dataset']
-    val_dir = config['val_dataset']
-    test_dir = config['test_dataset']
-
-    mem_snapshot_epochs = config['mem_snapshot_epochs']
 
     # Set up DataLoaders
     train_dataset = PhysionetDataset(dir=train_dir,
@@ -137,8 +141,6 @@ def main():
     # Final sigmoid activation
     sigmoid = torch.nn.Sigmoid()
 
-    start_record_memory_history()
-
     # Training and Validation
     for epoch in range(1, epochs + 1):
 
@@ -175,12 +177,12 @@ def main():
 
         if epoch == mem_snapshot_epochs:
             stop_record_memory_history()
-            export_memory_snapshot()
+            export_memory_snapshot(config['logging_folder'])
 
         print('============ VALIDATE EPOCH: ' + str(epoch) + ' ============')
         with torch.no_grad():
             # do not uncomment model.eval() due to both BCELoss and AUPRC calculation
-            # model.eval()
+            model.eval()
             val_loss = 0
             score = Challenge2018Score()
             for batch_idx, _data in enumerate(val_loader):
@@ -191,7 +193,7 @@ def main():
 
                 # Measure time during forward propagation
                 start = time.time()
-                outputs = model(inputs, True)
+                outputs = model(inputs)
                 end = time.time()
 
                 # Calculate loss
@@ -258,7 +260,7 @@ def main():
             labels = labels.to(device)
 
             # Forward propagation
-            outputs = model(inputs)
+            outputs = model(inputs, True)
 
             # Send to CPU
             outputs = outputs.cpu().detach().numpy()

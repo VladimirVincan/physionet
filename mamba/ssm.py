@@ -9,7 +9,7 @@ from ConvFeatureExtractionModel import ConvFeatureExtractionModel
 
 
 class StateSpaceModel(nn.Module):
-    def __init__(self, feature_enc_layers, feature_mamba_layers):
+    def __init__(self, feature_enc_layers, feature_mamba_layers, scale=1):
         super().__init__()
 
 
@@ -21,6 +21,7 @@ class StateSpaceModel(nn.Module):
             dropout=0.0,
             conv_bias=True,
         )
+        self.scale = scale
 
         # TODO: add layer norm and post_extract_proj
 
@@ -29,20 +30,21 @@ class StateSpaceModel(nn.Module):
         self.mamba_encoder = MambaEncoder(feature_mamba_layers)
 
         self.decoder = nn.Linear(in_features=feature_mamba_layers[-1], out_features=1)
-        # Do not put Sigmoid non-linearity, due to BCEWithLogitsLoss
-        self.sigmoid = nn.Sigmoid()
 
-    def forward(self, source):
-        source = source.squeeze(1)
-        features = self.feature_extractor(source)
-        features = features.transpose(1, 2)
-        features = self.mamba_encoder(features)
-        # features = self.layer_norm(features)
-        features = self.decoder(features)
-        if self.eval:
-            features = self.sigmoid(features)
-
-        return features
+    def forward(self, x, sigmoid=False, *args, **kwargs):
+        x = x.squeeze(1)
+        x = self.feature_extractor(x)
+        x = x.transpose(1, 2)
+        x = self.mamba_encoder(x)
+        # x = self.layer_norm(x)
+        x = self.decoder(x)
+        if not self.training:
+            if sigmoid:
+                x = torch.nn.functional.sigmoid(x)
+            x = x.permute(0, 2, 1)
+            x = torch.nn.functional.interpolate(x, scale_factor=self.scale, mode='linear')
+            x = x.permute(0, 2, 1)
+        return x
 
 
 class MambaEncoder(nn.Module):
