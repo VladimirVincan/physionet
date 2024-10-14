@@ -9,7 +9,7 @@ from ConvFeatureExtractionModel import ConvFeatureExtractionModel
 
 
 class StateSpaceModel(nn.Module):
-    def __init__(self, feature_enc_layers, feature_mamba_layers, scale=1):
+    def __init__(self, feature_enc_layers, feature_mamba_layers, decoder_layers='[(32, 1, 1)]', scale=1):
         super().__init__()
 
 
@@ -28,6 +28,13 @@ class StateSpaceModel(nn.Module):
         # feature_mamba_layers = "[(32)]"  # TODO
         feature_mamba_layers = eval(feature_mamba_layers)
         self.mamba_encoder = MambaEncoder(feature_mamba_layers)
+        self.decoder1 = ConvFeatureExtractionModel(
+            conv_layers=feature_enc_layers,
+            dropout=0.0,
+            conv_bias=True,
+            in_dim=16,
+        )
+
 
         self.decoder = nn.Linear(in_features=feature_mamba_layers[-1], out_features=1)
 
@@ -37,6 +44,7 @@ class StateSpaceModel(nn.Module):
         x = x.transpose(1, 2)
         x = self.mamba_encoder(x)
         # x = self.layer_norm(x)
+        x = self.decoder1(x)
         x = self.decoder(x)
         if not self.training:
             if sigmoid:

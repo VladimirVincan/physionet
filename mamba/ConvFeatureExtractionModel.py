@@ -10,6 +10,7 @@ class ConvFeatureExtractionModel(nn.Module):
         conv_layers: list[tuple[int, int, int]],
         dropout: float = 0.0,
         conv_bias: bool = False,
+        in_dim: int = 13
     ):
 
         super().__init__()
@@ -38,7 +39,7 @@ class ConvFeatureExtractionModel(nn.Module):
                 nn.GELU(),
             )
 
-        in_d = 13
+        in_d = in_dim
         self.conv_layers = nn.ModuleList()
         for i, cl in enumerate(conv_layers):
             assert len(cl) == 3, "invalid conv definition: " + str(cl)

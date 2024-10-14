@@ -64,7 +64,7 @@ def main():
     # Define model
     torch.manual_seed(42)
     device = torch.device(config['summary_device'])
-    model = StateSpaceModel("[(16, 1, 1)]", "5*[(16)]", config['dataloader_stride'])
+    model = StateSpaceModel("3*[(16, 1, 1)]", "5*[(16)]", "3*[(16, 1, 1)]", config['dataloader_stride'])
     # model = PointFiveFourModel(13)
     model.to(device)
 
@@ -100,23 +100,23 @@ def main():
 
     val_dataset = PhysionetDataset(dir=val_dir,
                                    train=False,
-                                   collate_fn=collate_fn,
                                    stride=dataloader_stride,
                                    order=filter_order,
                                    Wn=filter_Wn)
     val_loader = DataLoader(val_dataset,
                             shuffle=False,
+                            collate_fn=collate_fn,
                             batch_size=batch_size,
                             num_workers=num_workers)
 
     test_dataset = PhysionetDataset(dir=test_dir,
                                     train=False,
-                                    collate_fn=collate_fn,
                                     stride=dataloader_stride,
                                     order=filter_order,
                                     Wn=filter_Wn)
     test_loader = DataLoader(test_dataset,
                              shuffle=False,
+                             collate_fn=collate_fn,
                              batch_size=batch_size,
                              num_workers=num_workers)
 
@@ -178,8 +178,8 @@ def main():
         writer.flush()
 
         if epoch == mem_snapshot_epochs:
-            stop_record_memory_history()
             export_memory_snapshot(config['logging_folder'])
+            stop_record_memory_history()
 
         print('============ VALIDATE EPOCH: ' + str(epoch) + ' ============')
         with torch.no_grad():

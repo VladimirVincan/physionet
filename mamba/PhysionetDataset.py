@@ -119,13 +119,16 @@ class PhysionetDataset(Dataset):
         self.Wn = Wn
 
     def __len__(self):
+        # return 12
+        return len(self.listdir)
         return len(self.listdir) * self.stride
         # return 994  # train
         # return 989  # test
 
     def __getitem__(self, idx):
-        start = idx % self.stride
-        idx = idx // self.stride
+        # start = idx % self.stride
+        # idx = idx // self.stride
+        start = 0
 
         record_name = os.path.join(self.dir, self.listdir[idx], self.listdir[idx])
 
