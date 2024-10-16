@@ -64,7 +64,7 @@ def main():
     # Define model
     torch.manual_seed(42)
     device = torch.device(config['summary_device'])
-    model = StateSpaceModel("3*[(16, 1, 1)]", "5*[(16)]", "3*[(16, 1, 1)]", config['dataloader_stride'])
+    model = StateSpaceModel("5*[(128, 1, 1)]", "5*[(128)]", "[(128, 1, 1)]", config['dataloader_stride'])
     # model = PointFiveFourModel(13)
     model.to(device)
 
@@ -173,6 +173,7 @@ def main():
             writer.add_scalar('Train/Batch_Time', end - start, total_steps)
             writer.add_scalar('Train/LR',
                               scheduler.get_last_lr()[0], total_steps)
+
         writer.add_scalar('Train/Loss', train_loss / len(train_loader), epoch)
         writer.add_scalar('Train/Total_Steps', total_steps, epoch)
         writer.flush()
@@ -262,7 +263,7 @@ def main():
             labels = labels.to(device)
 
             # Forward propagation
-            outputs = model(inputs, True)
+            outputs = best_model(inputs, True)
 
             # Send to CPU
             outputs = outputs.cpu().detach().numpy()

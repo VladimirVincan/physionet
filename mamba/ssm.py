@@ -28,15 +28,17 @@ class StateSpaceModel(nn.Module):
         # feature_mamba_layers = "[(32)]"  # TODO
         feature_mamba_layers = eval(feature_mamba_layers)
         self.mamba_encoder = MambaEncoder(feature_mamba_layers)
+
+        decoder_layers = eval(decoder_layers)
         self.decoder1 = ConvFeatureExtractionModel(
-            conv_layers=feature_enc_layers,
+            conv_layers=decoder_layers,
             dropout=0.0,
             conv_bias=True,
-            in_dim=16,
+            in_dim=feature_mamba_layers[-1],
+            transpose=True,
         )
 
-
-        self.decoder = nn.Linear(in_features=feature_mamba_layers[-1], out_features=1)
+        self.decoder = nn.Linear(in_features=decoder_layers[-1][0], out_features=1)
 
     def forward(self, x, sigmoid=False, *args, **kwargs):
         x = x.squeeze(1)
@@ -77,7 +79,7 @@ class MambaEncoder(nn.Module):
                     # ),
                     BiMambaEncoder(
                         d_model=dim,
-                        n_state=8,
+                        n_state=16,
                     ),
                     LayerNorm(dim)
                 ]

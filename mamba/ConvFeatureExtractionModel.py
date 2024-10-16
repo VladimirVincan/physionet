@@ -10,10 +10,12 @@ class ConvFeatureExtractionModel(nn.Module):
         conv_layers: list[tuple[int, int, int]],
         dropout: float = 0.0,
         conv_bias: bool = False,
-        in_dim: int = 13
+        in_dim: int = 13,
+        transpose: bool = False
     ):
 
         super().__init__()
+        self.transpose = transpose
 
         def block(
             n_in,
@@ -65,6 +67,8 @@ class ConvFeatureExtractionModel(nn.Module):
         for conv in self.conv_layers:
             x = conv(x)
 
+        if self.transpose:
+            x = x.transpose(-1, -2)
         return x
 
 

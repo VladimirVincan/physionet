@@ -312,7 +312,7 @@ class PointFiveFourModel(nn.Module):
         self.skipLSTM.rnn = self.skipLSTM.rnn.cuda(device)
         return super(PointFiveFourModel, self).cuda(device)
 
-    def forward(self, x, scale_orig=False):
+    def forward(self, x, sigmoid=False, *args, **kwargs):
         x = x.permute(0, 2, 1).detach().contiguous()
 
         # Downsampling to 1 entity per second
@@ -344,12 +344,20 @@ class PointFiveFourModel(nn.Module):
 
         # x = torch.exp(x)
         # x = torch.squeeze(x, 0)
+        if not self.training:
+            if sigmoid:
+                x = torch.nn.functional.sigmoid(x)
+            x = torch.nn.functional.interpolate(x, scale_factor=200, mode='linear')
+        else:  # if self.training
+            x = torch.nn.functional.interpolate(x, scale_factor=50, mode='linear')
+        return x.permute(0, 2, 1)
+
         if self.training and not scale_orig:
             x = torch.nn.functional.interpolate(x, scale_factor=50, mode='linear')
         elif self.training and scale_orig:
             x = torch.nn.functional.interpolate(x, scale_factor=200, mode='linear')
         else:
-            x = torch.nn.functional.softmax(x)
+            x = torch.nn.functional.sigmoid(x)
             x = torch.nn.functional.interpolate(x, scale_factor=200, mode='linear')
 
         # if not(self.training):
