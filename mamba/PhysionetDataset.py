@@ -110,7 +110,7 @@ def normalize_dataset(input_signals):
 
 
 class PhysionetDataset(Dataset):
-    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1, train=True, order=4, Wn=25.0):
+    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1, train=True, order=4, Wn=25.0, collate_to_2e23=False):
         self.dir = dir
         self.listdir = os.listdir(dir)
         self.stride = stride
@@ -168,6 +168,7 @@ class PhysionetDataset(Dataset):
         input_signals = torch.Tensor(input_signals.values)
         arousals = torch.Tensor(arousals)
 
+        # return torch.ones(1_000_000, 13), torch.zeros(1_000_000, 1)
         return input_signals, arousals
 
 
@@ -226,10 +227,11 @@ class PhysionetPreloadDataset(Dataset):
 
 
 class PointFiveFourDataset(Dataset):
-    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1):
+    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1, pad_2e23=False):
         self.dir = dir
         self.listdir = os.listdir(dir)
         self.stride = stride
+        self.pad_2e23 = pad_2e23
 
     def __len__(self):
         return len(self.listdir)
@@ -332,6 +334,10 @@ class PointFiveFourDataset(Dataset):
         signals = torch.from_numpy(signals)
         arousals = torch.from_numpy(signals)
 
+        if pad_2e23 == True:
+            signals = pad_tensor_2e23(signals)
+            arousals = pad_tensor_2e23(arousals)
+
         return signals, arousals
 
 def collate_fn(data: list[tuple[torch.Tensor, torch.Tensor]]):
@@ -352,3 +358,8 @@ def collate_fn_numpy2tensor(data: list[tuple[torch.Tensor, torch.Tensor]]):
     features = torch.nn.utils.rnn.pad_sequence(tensors, batch_first=True)
     labels = torch.nn.utils.rnn.pad_sequence(targets, batch_first=True, padding_value=-1.0)
     return features, labels
+
+
+def pad_tensor_2e23(tensor, value=0):
+    padding_size = 
+    tensor

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
+import copy
+import csv
 import glob
 import os
-import csv
 import sys
 import time
-import copy
 
 import joblib
 import numpy as np
@@ -16,15 +16,18 @@ import yaml
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchinfo import summary
-from memory_snapshot import start_record_memory_history, stop_record_memory_history, export_memory_snapshot
 
 import physionetchallenge2018_lib as phyc
 from ConvFeatureExtractionModel import ConvFeatureExtractionModel
+from memory_snapshot import (export_memory_snapshot,
+                             start_record_memory_history,
+                             stop_record_memory_history)
 from PhysionetDataset import (PhysionetDataset, PhysionetPreloadDataset,
                               collate_fn)
 from PointFiveFourModel import PointFiveFourModel
 from score2018 import Challenge2018Score
 from ssm import StateSpaceModel
+from ssm2 import StateSpaceModel2
 from UNet import UNet
 
 
@@ -64,7 +67,8 @@ def main():
     # Define model
     torch.manual_seed(42)
     device = torch.device(config['summary_device'])
-    model = StateSpaceModel("5*[(128, 1, 1)]", "5*[(128)]", "[(128, 1, 1)]", config['dataloader_stride'])
+    # model = StateSpaceModel("5*[(128, 1, 1)]", "5*[(128)]", "[(128, 1, 1)]", config['dataloader_stride'])
+    model = StateSpaceModel2()
     # model = PointFiveFourModel(13)
     model.to(device)
 
