@@ -110,7 +110,7 @@ def normalize_dataset(input_signals):
 
 
 class PhysionetDataset(Dataset):
-    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1, train=True, order=4, Wn=25.0, collate_to_2e23=False):
+    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1, train=True, order=4, Wn=25.0, pad_to_2_power_23=False):
         self.dir = dir
         self.listdir = os.listdir(dir)
         self.stride = stride
@@ -167,6 +167,10 @@ class PhysionetDataset(Dataset):
 
         input_signals = torch.Tensor(input_signals.values)
         arousals = torch.Tensor(arousals)
+
+        if pad_to_2_power_23 == True:
+            input_signals = pad_to_2_power_23(input_signals)
+            arousals = pad_to_2_power_23(arousals)
 
         # return torch.ones(1_000_000, 13), torch.zeros(1_000_000, 1)
         return input_signals, arousals
@@ -360,6 +364,25 @@ def collate_fn_numpy2tensor(data: list[tuple[torch.Tensor, torch.Tensor]]):
     return features, labels
 
 
-def pad_tensor_2e23(tensor, value=0):
-    padding_size = 
-    tensor
+def pad_to_2_power_23(tensor: torch.Tensor, pad_value: int) -> torch.Tensor:
+    # Ensure the pad_value is valid
+    if pad_value not in {0, -1}:
+        raise ValueError("pad_value must be either 0 or -1.")
+
+    target_length = 2**23
+    current_length = tensor.size(-1)  # Get the size of the last dimension
+
+    # Check if padding is needed
+    if current_length >= target_length:
+        raise ValueError(f"The last dimension is already {current_length}, which exceeds {target_length}.")
+
+    # Calculate the amount of padding on each side
+    total_padding = target_length - current_length
+    pad_left = total_padding // 2
+    pad_right = total_padding - pad_left  # Ensures exact padding if total_padding is odd
+
+    # Apply padding using torch.nn.functional.pad
+    padding = (pad_left, pad_right)  # Only specify for the last dimension
+    padded_tensor = torch.nn.functional.pad(tensor, padding, value=pad_value)
+
+    return padded_tensor

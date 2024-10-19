@@ -51,6 +51,7 @@ def main():
     num_workers = config['num_workers']
     batch_size = config['batch_size']
     dataloader_stride = config['dataloader_stride']
+    pad_to_2_power_23 = config['pad_to_2_power_23']
 
     filter_Wn = config['filter_Wn']
     filter_order = config['filter_order']
@@ -95,7 +96,8 @@ def main():
     train_dataset = PhysionetDataset(dir=train_dir,
                                      stride=dataloader_stride,
                                      order=filter_order,
-                                     Wn=filter_Wn)
+                                     Wn=filter_Wn,
+                                     pad_to_2_power_23=pad_to_2_power_23)
     train_loader = DataLoader(train_dataset,
                               shuffle=True,
                               collate_fn=collate_fn,
@@ -106,7 +108,8 @@ def main():
                                    train=False,
                                    stride=dataloader_stride,
                                    order=filter_order,
-                                   Wn=filter_Wn)
+                                   Wn=filter_Wn,
+                                   pad_to_2_power_23=pad_to_2_power_23)
     val_loader = DataLoader(val_dataset,
                             shuffle=False,
                             collate_fn=collate_fn,
@@ -117,7 +120,8 @@ def main():
                                     train=False,
                                     stride=dataloader_stride,
                                     order=filter_order,
-                                    Wn=filter_Wn)
+                                    Wn=filter_Wn,
+                                    pad_to_2_power_23=pad_to_2_power_23)
     test_loader = DataLoader(test_dataset,
                              shuffle=False,
                              collate_fn=collate_fn,
