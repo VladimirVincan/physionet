@@ -16,4 +16,5 @@ batch_size: 4
 dataloader_stride: 4
 filter_Wn: 25.0
 filter_order: 4
+pad_to_2_power_23: True
 summary_device: "cuda"

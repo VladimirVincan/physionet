@@ -97,7 +97,7 @@ def main():
                                      stride=dataloader_stride,
                                      order=filter_order,
                                      Wn=filter_Wn,
-                                     pad_to_2_power_23=pad_to_2_power_23)
+                                     pad_to_2_power_23_bool=pad_to_2_power_23)
     train_loader = DataLoader(train_dataset,
                               shuffle=True,
                               collate_fn=collate_fn,
@@ -109,7 +109,7 @@ def main():
                                    stride=dataloader_stride,
                                    order=filter_order,
                                    Wn=filter_Wn,
-                                   pad_to_2_power_23=pad_to_2_power_23)
+                                   pad_to_2_power_23_bool=pad_to_2_power_23)
     val_loader = DataLoader(val_dataset,
                             shuffle=False,
                             collate_fn=collate_fn,
@@ -121,7 +121,7 @@ def main():
                                     stride=dataloader_stride,
                                     order=filter_order,
                                     Wn=filter_Wn,
-                                    pad_to_2_power_23=pad_to_2_power_23)
+                                    pad_to_2_power_23_bool=pad_to_2_power_23)
     test_loader = DataLoader(test_dataset,
                              shuffle=False,
                              collate_fn=collate_fn,
@@ -241,9 +241,14 @@ def main():
 
             # save best model
             if best_auprc < auprc_g:
+                if os.path.exists(config['model_name'] + '_' + str(best_epoch)):
+                    os.remove(config['model_name'] + '_' + str(best_epoch))
+
                 best_auprc = auprc_g
                 best_model = copy.deepcopy(model)
                 best_epoch = epoch
+
+                torch.save(best_model.state_dict(), config['model_name'] + '_' + str(best_epoch))
 
             writer.flush()
     writer.close()
