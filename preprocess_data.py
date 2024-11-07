@@ -143,85 +143,105 @@ def main():
     """
     load_dotenv()
 
-    train_df = pd.read_csv(os.path.join(os.environ['csv_path'], 'train.csv'))
-    val_df   = pd.read_csv(os.path.join(os.environ['csv_path'], 'validation.csv'))
-    test_df  = pd.read_csv(os.path.join(os.environ['csv_path'], 'test.csv'))
+    # train_df = pd.read_csv(os.path.join(os.environ['csv_path'], 'train.csv'))
+    # val_df   = pd.read_csv(os.path.join(os.environ['csv_path'], 'validation.csv'))
+    # test_df  = pd.read_csv(os.path.join(os.environ['csv_path'], 'test.csv'))
 
     orig_data_length = 2**23
     data_length = 2**23 // int(os.environ['stride'])
 
-    if os.path.exists(os.path.join(os.environ['extracted_dataset_path'])):
-        os.remove(os.path.join(os.environ['extracted_dataset_path'], 'trainX.dat'))
-    if os.path.exists(os.path.join(os.environ['extracted_dataset_path'])):
-        os.remove(os.path.join(os.environ['extracted_dataset_path'], 'trainy.dat'))
+    # if os.path.exists(os.path.join(os.environ['extracted_dataset_path'])):
+    #     os.remove(os.path.join(os.environ['extracted_dataset_path'], 'trainX.dat'))
+    # if os.path.exists(os.path.join(os.environ['extracted_dataset_path'])):
+    #     os.remove(os.path.join(os.environ['extracted_dataset_path'], 'trainy.dat'))
 
-    fp_trainX = np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'trainX.dat'),dtype='float32', mode='w+', shape=(train_df.shape[0], data_length,      13))
-    fp_trainy = np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'trainy.dat'),dtype='int32',   mode='w+', shape=(train_df.shape[0], data_length))
     # fp_valX =   np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'valX.dat'),  dtype='float32', mode='w+', shape=(val_df.shape[0],   data_length,      13))
     # fp_valy =   np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'valy.dat'),  dtype='int32',   mode='w+', shape=(val_df.shape[0],   orig_data_length))
     # fp_testX =  np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'testX.dat'), dtype='float32', mode='w+', shape=(test_df.shape[0],  data_length,      13))
     # fp_testy =  np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'testy.dat'), dtype='int32',   mode='w+', shape=(test_df.shape[0],  orig_data_length))
 
-    for i, record in enumerate(train_df['Record']):
-        print(i)
-        arousals = mat73.loadmat(os.path.join(os.environ['downloaded_dataset_path'], record, record + '-arousal.mat'))['data']['arousals']
-        signals = scipy.io.loadmat(os.path.join(os.environ['downloaded_dataset_path'], record, record + '.mat'))['val']
+    for split in ['train', 'val', 'test']:
+        df = pd.read_csv(os.path.join(os.environ['csv_path'], split + '.csv'))
 
-        # Int16 -> Float64 & Int16 -> Int32
-        signals = np.array(signals).astype(np.float64)
-        arousals = np.array(arousals).astype(np.int32)
+        if os.path.exists(os.path.join(os.environ['extracted_dataset_path'], split + 'X.dat')):
+            os.remove(os.path.join(os.environ['extracted_dataset_path'], split + 'X.dat'))
+        if os.path.exists(os.path.join(os.environ['extracted_dataset_path'], split + 'y.dat')):
+            os.remove(os.path.join(os.environ['extracted_dataset_path'], split + 'y.dat'))
 
-        # Low-pass filter
-        b, a = scipy.signal.iirfilter(int(os.environ['filter_order']), Wn=float(os.environ['Wn']), fs=200, btype="low", ftype="butter")
-        for j, signal in enumerate(signals):
-            signals[j] = scipy.signal.filtfilt(b, a, signal)
+        if split == 'train':
+            y_data_length = data_length
+        else:
+            y_data_length = orig_data_length
 
-        # Float64 -> Float32
-        signals = signals.astype(np.float32)
+        fp_X = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'X.dat'), dtype='float32', mode='w+', shape=(df.shape[0], data_length, 13))
+        fp_y = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'y.dat'), dtype='int32',   mode='w+', shape=(df.shape[0], y_data_length))
 
-        # Pad signals
-        pad_length = orig_data_length - signals.shape[1]
-        signals = np.pad(signals, ((0, 0), (0, pad_length)), 'constant')
-        arousals = np.pad(arousals, (0, pad_length), 'constant')
+        for i, record in enumerate(df['Record']):
+            arousals = mat73.loadmat(os.path.join(os.environ['downloaded_dataset_path'], record, record + '-arousal.mat'))['data']['arousals']
+            signals = scipy.io.loadmat(os.path.join(os.environ['downloaded_dataset_path'], record, record + '.mat'))['val']
 
-        # Sample with stride
-        signals = signals[:, ::int(os.environ['stride'])]
-        arousals = arousals[::int(os.environ['stride'])]
+            # Int16 -> Float64 & Int16 -> Int32
+            signals = np.array(signals).astype(np.float64)
+            arousals = np.array(arousals).astype(np.int32)
 
-        # Transpose
-        signals = signals.transpose()
+            # Low-pass filter
+            b, a = scipy.signal.iirfilter(int(os.environ['filter_order']), Wn=float(os.environ['Wn']), fs=200, btype="low", ftype="butter")
+            for j, signal in enumerate(signals):
+                signals[j] = scipy.signal.filtfilt(b, a, signal)
 
-        fp_trainX[i, :, :] = signals[:, :]
-        fp_trainy[i, :] = arousals[:]
+            # Float64 -> Float32
+            signals = signals.astype(np.float32)
 
-    fp_trainX.flush()
-    fp_trainy.flush()
-    # gc.collect()
+            # Pad signals
+            pad_length = orig_data_length - signals.shape[1]
+            signals = np.pad(signals, ((0, 0), (0, pad_length)), 'constant')
+            arousals = np.pad(arousals, (0, pad_length), 'constant', constant_values=(-1, -1))
 
-    del fp_trainX
-    del fp_trainy
+            # Sample with stride
+            signals = signals[:, ::int(os.environ['stride'])]
+            if split == 'train':
+                arousals = arousals[::int(os.environ['stride'])]
 
+            # Transpose
+            signals = signals.transpose()
+
+            fp_X[i, :, :] = signals[:, :]
+            fp_y[i, :] = arousals[:]
+
+        fp_X.flush()
+        fp_y.flush()
+
+        # gc.collect()
+
+        del fp_X
+        del fp_y
+
+        print('finished preprocessing ' + split)
 
 def test():
+    print('---------------- test --------------')
+
     load_dotenv()
-
-    train_df = pd.read_csv(os.path.join(os.environ['csv_path'], 'train.csv'))
-    val_df   = pd.read_csv(os.path.join(os.environ['csv_path'], 'validation.csv'))
-    test_df  = pd.read_csv(os.path.join(os.environ['csv_path'], 'test.csv'))
-
     orig_data_length = 2**23
     data_length = 2**23 // int(os.environ['stride'])
 
-    print('---------------- test --------------')
+    for split in ['train', 'val', 'test']:
+        df = pd.read_csv(os.path.join(os.environ['csv_path'], split + '.csv'))
+        if split == 'train':
+            y_data_length = data_length
+        else:
+            y_data_length = orig_data_length
+        fp_X = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'X.dat'), dtype='float32', mode='r', shape=(df.shape[0], data_length, 13))
+        fp_y = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'y.dat'), dtype='int32',   mode='r', shape=(df.shape[0], y_data_length))
 
-    fp_trainX = np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'trainX.dat'), dtype='float32', mode='r', shape=(train_df.shape[0], data_length, 13))
-    fp_trainy = np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'trainy.dat'), dtype='int32', mode='r', shape=(train_df.shape[0], data_length))
+        X_tensor = torch.FloatTensor(np.array(fp_X).astype(np.float32)).contiguous()
+        y_tensor = torch.IntTensor  (np.array(fp_y).astype(np.int32)).contiguous()
 
-    trainX_tensor = torch.FloatTensor(np.array(fp_trainX).astype(np.float32)).contiguous()
-    trainy_tensor = torch.IntTensor(np.array(fp_trainy).astype(np.int32)).contiguous()
+        print('split = ' + split)
+        print(X_tensor[0])
+        print(y_tensor[0])
 
-    print(trainX_tensor)
-    print(trainy_tensor)
+    print('------------ finished testing ------------')
 
 if __name__ == '__main__':
     main()
