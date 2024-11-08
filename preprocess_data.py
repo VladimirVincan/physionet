@@ -143,22 +143,8 @@ def main():
     """
     load_dotenv()
 
-    # train_df = pd.read_csv(os.path.join(os.environ['csv_path'], 'train.csv'))
-    # val_df   = pd.read_csv(os.path.join(os.environ['csv_path'], 'validation.csv'))
-    # test_df  = pd.read_csv(os.path.join(os.environ['csv_path'], 'test.csv'))
-
     orig_data_length = 2**23
-    data_length = 2**23 // int(os.environ['stride'])
-
-    # if os.path.exists(os.path.join(os.environ['extracted_dataset_path'])):
-    #     os.remove(os.path.join(os.environ['extracted_dataset_path'], 'trainX.dat'))
-    # if os.path.exists(os.path.join(os.environ['extracted_dataset_path'])):
-    #     os.remove(os.path.join(os.environ['extracted_dataset_path'], 'trainy.dat'))
-
-    # fp_valX =   np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'valX.dat'),  dtype='float32', mode='w+', shape=(val_df.shape[0],   data_length,      13))
-    # fp_valy =   np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'valy.dat'),  dtype='int32',   mode='w+', shape=(val_df.shape[0],   orig_data_length))
-    # fp_testX =  np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'testX.dat'), dtype='float32', mode='w+', shape=(test_df.shape[0],  data_length,      13))
-    # fp_testy =  np.memmap(os.path.join(os.environ['extracted_dataset_path'], 'testy.dat'), dtype='int32',   mode='w+', shape=(test_df.shape[0],  orig_data_length))
+    strided_data_length = 2**23 // int(os.environ['stride'])
 
     for split in ['train', 'val', 'test']:
         df = pd.read_csv(os.path.join(os.environ['csv_path'], split + '.csv'))
@@ -169,12 +155,12 @@ def main():
             os.remove(os.path.join(os.environ['extracted_dataset_path'], split + 'y.dat'))
 
         if split == 'train':
-            y_data_length = data_length
+            y_data_length = strided_data_length
         else:
             y_data_length = orig_data_length
 
-        fp_X = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'X.dat'), dtype='float32', mode='w+', shape=(df.shape[0], data_length, 13))
-        fp_y = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'y.dat'), dtype='int32',   mode='w+', shape=(df.shape[0], y_data_length))
+        fp_X = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'X.dat'), dtype='float32', mode='w+', shape=(df.shape[0], strided_data_length, 13))
+        fp_y = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'y.dat'), dtype='int32',   mode='w+', shape=(df.shape[0], y_data_length, 1))
 
         for i, record in enumerate(df['Record']):
             arousals = mat73.loadmat(os.path.join(os.environ['downloaded_dataset_path'], record, record + '-arousal.mat'))['data']['arousals']
@@ -205,8 +191,11 @@ def main():
             # Transpose
             signals = signals.transpose()
 
+            # Expand dims: [y_length] -> [y_length, 1]
+            arousals = np.expand_dims(arousals, -1)
+
             fp_X[i, :, :] = signals[:, :]
-            fp_y[i, :] = arousals[:]
+            fp_y[i, :, :] = arousals[:, :]
 
         fp_X.flush()
         fp_y.flush()
@@ -223,16 +212,16 @@ def test():
 
     load_dotenv()
     orig_data_length = 2**23
-    data_length = 2**23 // int(os.environ['stride'])
+    strided_data_length = 2**23 // int(os.environ['stride'])
 
     for split in ['train', 'val', 'test']:
         df = pd.read_csv(os.path.join(os.environ['csv_path'], split + '.csv'))
         if split == 'train':
-            y_data_length = data_length
+            y_data_length = strided_data_length
         else:
             y_data_length = orig_data_length
-        fp_X = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'X.dat'), dtype='float32', mode='r', shape=(df.shape[0], data_length, 13))
-        fp_y = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'y.dat'), dtype='int32',   mode='r', shape=(df.shape[0], y_data_length))
+        fp_X = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'X.dat'), dtype='float32', mode='r', shape=(df.shape[0], strided_data_length, 13))
+        fp_y = np.memmap(os.path.join(os.environ['extracted_dataset_path'], split + 'y.dat'), dtype='int32',   mode='r', shape=(df.shape[0], y_data_length, 1))
 
         X_tensor = torch.FloatTensor(np.array(fp_X).astype(np.float32)).contiguous()
         y_tensor = torch.IntTensor  (np.array(fp_y).astype(np.int32)).contiguous()

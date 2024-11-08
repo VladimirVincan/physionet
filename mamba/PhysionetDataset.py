@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import torch
+from dotenv import load_dotenv
 from scipy.signal import fftconvolve, order_filter
 from torch.utils.data import Dataset
 
@@ -13,8 +14,7 @@ import physionetchallenge2018_lib as phyc
 
 
 def normalize_dataset(input_signals):
-    data_max = {
-        'F3-M2':       [8646.0],
+    data_max = {'F3-M2':       [8646.0],
         'F4-M1':       [8774.0],
         'C3-M2':       [8198.0],
         'C4-M1':       [8110.0],
@@ -175,6 +175,32 @@ class PhysionetDataset(Dataset):
 
         # return torch.ones(1_000_000, 13), torch.zeros(1_000_000, 1)
         return input_signals, arousals
+
+
+class PhysionetPreprocessedDataset(Dataset):
+    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', split='train', stride=4, num_samples=994):
+        orig_data_length = 2**23
+        strided_data_length = 2**23 // stride
+        self.num_samples = num_samples
+
+        if split == 'train':
+            y_data_length = strided_data_length
+        else:
+            y_data_length = orig_data_length
+
+        self.fp_X = np.memmap(os.path.join(dir, split + 'X.dat'), dtype='float32', mode='r', shape=(num_samples, strided_data_length, 13))
+        self.fp_y = np.memmap(os.path.join(dir, split + 'y.dat'), dtype='int32',   mode='r', shape=(num_samples, y_data_length, 1))
+
+
+    def __len__(self):
+        return self.num_samples
+
+    def __getitem__(self, idx):
+        signals = torch.FloatTensor(np.array(self.fp_X[idx]).astype(np.float32)).contiguous()
+        arousals = torch.IntTensor(np.array(self.fp_y[idx]).astype(np.int32)).contiguous()
+
+        # return torch.ones(1_000_000, 13), torch.zeros(1_000_000, 1)
+        return signals, arousals
 
 
 class PhysionetPreloadDataset(Dataset):
@@ -383,3 +409,27 @@ def pad_to_2_power_23(tensor: torch.Tensor, pad_value: int) -> torch.Tensor:
     padded_tensor = torch.nn.functional.pad(tensor, padding, value=pad_value)
 
     return padded_tensor
+
+
+def test():
+    print('------------------ test ---------------------')
+
+    from torch.utils.data import DataLoader
+    load_dotenv()
+
+    dir = os.environ['extracted_dataset_path']
+    stride = os.environ['stride']
+
+    train_dataset = PhysionetPreprocessedDataset(dir=dir, num_samples=2)
+    train_loader = DataLoader(train_dataset, shuffle=True)
+
+    for batch_idx, _data in enumerate(train_loader):
+        signals, arousals = _data
+        print(signals.shape)
+        print(arousals.shape)
+
+        print(signals)
+        print(arousals)
+
+if __name__ == '__main__':
+    test()
