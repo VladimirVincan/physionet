@@ -186,8 +186,8 @@ class PhysionetDataset(Dataset):
         input_signals = self.pad_signal(input_signals, 0, self.pad_length // self.stride)
         if self.train == True:
             arousals = self.pad_signal(arousals, -1, self.pad_length // self.stride)
-        else:
-            arousals = self.pad_signal(arousals, -1, self.pad_length)
+        # else:
+        #     arousals = self.pad_signal(arousals, -1, self.pad_length)
 
         # return torch.ones(1_000_000, 13), torch.zeros(1_000_000, 1)
         return input_signals, arousals
