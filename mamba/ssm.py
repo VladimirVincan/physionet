@@ -52,7 +52,7 @@ class StateSpaceModel(nn.Module):
             if sigmoid:
                 x = torch.nn.functional.sigmoid(x)
             x = x.permute(0, 2, 1)
-            x = torch.nn.functional.interpolate(x, scale_factor=self.scale, mode='linear')
+            x = torch.nn.functional.interpolate(x, scale_factor=self.scale*40, mode='linear')
             x = x.permute(0, 2, 1)
         return x
 

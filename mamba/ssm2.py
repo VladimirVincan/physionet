@@ -38,8 +38,6 @@ class StateSpaceModel2(nn.Module):
         self.classification_layer = nn.Conv1d(32, 1, kernel_size=1)
 
     def forward(self, x, sigmoid=False, *args, **kwargs):
-        print(x.shape)
-
         route_connection = []
         indices = []
         x = x.permute(0, 2, 1)
@@ -65,11 +63,12 @@ class StateSpaceModel2(nn.Module):
         if not self.training:
             if sigmoid:
                 x = torch.nn.functional.sigmoid(x)
-            # x = x.permute(0, 2, 1)
-            # x = torch.nn.functional.interpolate(x,
-            #                                     scale_factor=self.scale,
-            #                                     mode='linear')
-            # x = x.permute(0, 2, 1)
+            x = x.permute(0, 2, 1)
+            x = torch.nn.functional.interpolate(x,
+                                                scale_factor=self.scale,
+                                                mode='linear')
+            x = x.permute(0, 2, 1)
+        x = x.permute(0, 2, 1)
         return x
 
 
@@ -104,13 +103,35 @@ class DoubleConv(nn.Module):
                       out_channels,
                       kernel_size=kernel_size,
                       padding='same'), nn.GELU(),
+            Norm(out_channels),
             nn.Conv1d(out_channels,
                       out_channels,
                       kernel_size=kernel_size,
-                      padding='same'), nn.GELU())
+                      padding='same'), nn.GELU(),
+            Norm(out_channels),
+        )
 
     def forward(self, x):
         return self.conv_op(x)
+
+
+# class Transpose(nn.Module):
+#     def __init__(self):
+#         super(Transpose, self).__init__()
+
+#     def forward(self, x):
+#         return x.permute(0, 2, 1)
+
+class Norm(nn.Module):
+    def __init__(self, embedding_dim):
+        super(Norm, self).__init__()
+        self.layer_norm = nn.LayerNorm(embedding_dim)
+
+    def forward(self, x):
+        x = x.permute(0, 2, 1)
+        x = self.layer_norm(x)
+        return x.permute(0, 2, 1)
+
 
 
 class DoublePointConv(nn.Module):
@@ -123,8 +144,11 @@ class DoublePointConv(nn.Module):
                       groups=in_channels,
                       kernel_size=kernel_size,
                       padding='same'), nn.GELU(),
+            Norm(in_channels),
             nn.Conv1d(in_channels, out_channels, kernel_size=1,
-                      padding='same'), nn.GELU())
+                      padding='same'), nn.GELU(),
+            Norm(out_channels),
+        )
 
     def forward(self, x):
         return self.conv_op(x)

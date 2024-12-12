@@ -102,22 +102,20 @@ def normalize_dataset(input_signals):
     df_mean = df_sum / df_count
     df_diff = df_max - df_min
 
-    # print(input_signals)
     input_signals = (input_signals - df_mean.iloc[0]) / df_stddev.iloc[0]
-    # print(input_signals)
 
     return input_signals
 
 
 class PhysionetDataset(Dataset):
-    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1, train=True, order=4, Wn=25.0, pad_to_2_power_23_bool=False):
+    def __init__(self, dir='/mnt/lun1/physionet/challenge-2018/training', stride=1, train=True, order=4, Wn=25.0, pad_length=-1):
         self.dir = dir
         self.listdir = os.listdir(dir)
         self.stride = stride
         self.train = train
         self.order = order
         self.Wn = Wn
-        self.pad_to_2_power_23_bool = pad_to_2_power_23_bool
+        self.pad_length = pad_length
 
     def __len__(self):
         # return 12
@@ -125,6 +123,20 @@ class PhysionetDataset(Dataset):
         return len(self.listdir) * self.stride
         # return 994  # train
         # return 989  # test
+
+    def pad_signal(self, tensor: torch.Tensor, pad_value: int, pad_length: int) -> torch.Tensor:
+        if pad_length < 0:  # pad_length = -1 if no padding is applied
+            return tensor
+
+        current_length = tensor.size(0)
+        if current_length > pad_length:
+            tensor = tensor[:pad_length, :]  # Assuming cropping along the last dimension (dim=1)
+            # tensor = torch.narrow(tensor, 0, 0, pad_length)
+        elif current_length < pad_length:
+            padding = (0, 0, 0, pad_length-current_length)  # Only specify for the last dimension
+            tensor = torch.nn.functional.pad(tensor, padding, value=pad_value)
+
+        return tensor
 
     def __getitem__(self, idx):
         # start = idx % self.stride
@@ -169,9 +181,13 @@ class PhysionetDataset(Dataset):
         input_signals = torch.Tensor(input_signals.values)
         arousals = torch.Tensor(arousals)
 
-        if self.pad_to_2_power_23_bool == True:
-            input_signals = pad_to_2_power_23(input_signals, 0)
-            arousals = pad_to_2_power_23(arousals, -1)
+        # 5_040_000 = 200*7*60*60, factorize with 2^5 and 5^2
+        # longest signal: 6_880_000 -> use 7_200_000?
+        input_signals = self.pad_signal(input_signals, 0, self.pad_length // self.stride)
+        if self.train == True:
+            arousals = self.pad_signal(arousals, -1, self.pad_length // self.stride)
+        else:
+            arousals = self.pad_signal(arousals, -1, self.pad_length)
 
         # return torch.ones(1_000_000, 13), torch.zeros(1_000_000, 1)
         return input_signals, arousals

@@ -88,14 +88,22 @@ class Challenge2018Score:
 
         # At the minimum threshold value, all samples are classified as
         # positive, and thus TPR = 1 and TNR = 0.
+        # print(pos_values.shape)
+        # print(pos_values)
+        # print(neg_values.shape)
+        # print(neg_values)
         tp = numpy.sum(pos_values)
         fp = numpy.sum(neg_values)
+        # print(tp)
+        # print(fp)
         tn = fn = 0
         tpr = 1
         tnr = 0
         if tp == 0 or fp == 0:
             # If either class is empty, scores are undefined.
+            # print('NAN', flush=True)
             return (float('nan'), float('nan'))
+        # print('NOT NAN', flush=True)
         ppv = float(tp) / (tp + fp)
         auroc = 0
         auprc = 0

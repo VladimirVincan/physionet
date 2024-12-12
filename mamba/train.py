@@ -68,8 +68,8 @@ def main():
     # Define model
     torch.manual_seed(42)
     device = torch.device(config['summary_device'])
-    # model = StateSpaceModel("5*[(128, 1, 1)]", "5*[(128)]", "[(128, 1, 1)]", config['dataloader_stride'])
-    model = StateSpaceModel2()
+    model = StateSpaceModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", config['dataloader_stride'])
+    # model = StateSpaceModel2()
     # model = PointFiveFourModel(13)
     model.to(device)
 
@@ -97,7 +97,7 @@ def main():
                                      stride=dataloader_stride,
                                      order=filter_order,
                                      Wn=filter_Wn,
-                                     pad_to_2_power_23_bool=pad_to_2_power_23)
+                                     pad_length=5_040_000)
     train_loader = DataLoader(train_dataset,
                               shuffle=True,
                               collate_fn=collate_fn,
@@ -109,7 +109,7 @@ def main():
                                    stride=dataloader_stride,
                                    order=filter_order,
                                    Wn=filter_Wn,
-                                   pad_to_2_power_23_bool=pad_to_2_power_23)
+                                   pad_length=5_040_000)
     val_loader = DataLoader(val_dataset,
                             shuffle=False,
                             collate_fn=collate_fn,
@@ -121,7 +121,7 @@ def main():
                                     stride=dataloader_stride,
                                     order=filter_order,
                                     Wn=filter_Wn,
-                                    pad_to_2_power_23_bool=pad_to_2_power_23)
+                                    pad_length=5_040_000)
     test_loader = DataLoader(test_dataset,
                              shuffle=False,
                              collate_fn=collate_fn,
@@ -154,7 +154,7 @@ def main():
     # Training and Validation
     for epoch in range(1, epochs + 1):
 
-        print('============ TRAIN EPOCH: ' + str(epoch) + ' ============')
+        print('============ TRAIN EPOCH: ' + str(epoch) + ' ============', flush=True)
         model.train()
         train_loss = 0
         for batch_idx, _data in enumerate(train_loader):
@@ -167,6 +167,11 @@ def main():
             start = time.time()
             optimizer.zero_grad()
             outputs = model(inputs)
+
+            outputs = outputs.permute(0, 2, 1)
+            outputs = torch.nn.functional.interpolate(outputs, scale_factor=40, mode='linear')
+            outputs = outputs.permute(0, 2, 1)
+
             mask = create_mask(labels)
             loss = criterion(outputs[mask], labels[mask])
 
