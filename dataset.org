@@ -32,6 +32,12 @@ Average EEG input is more than 12 times longer than audio input
 - The SaO2 was upsampled using sample and hold to 200Hz to synchronize samples.
 - All signals were measured in microvolts.
 
+* File description
+** name.arousal (~10 kB)
+** name.hea (~100 B)
+** name.mat (~100 MB)
+** name-arousal.mat (~100 kB)
+
 ** tr03-0792
 Shape: (6115000, 14)
 
