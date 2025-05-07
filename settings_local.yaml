@@ -1,0 +1,17 @@
+folder_dir: challenge-2018/training
+output_path: out
+train_batch_size: 2
+test_batch_size: 2
+epochs: 2
+num_channels: 12
+device: cuda
+reduction_factor: 50
+train:
+  - tr03-0005
+  - tr03-0029
+validation:
+  - tr03-0052
+  - tr03-0078
+test:
+  - tr03-0079
+  - tr03-0083
