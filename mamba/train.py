@@ -36,7 +36,6 @@ def create_mask(labels):
     labels = labels[mask]
     return mask
 
-
 def main():
     config_file = 'mamba/config.yaml'
     with open(config_file, 'r', encoding='utf-8') as f:
@@ -66,7 +65,7 @@ def main():
         start_record_memory_history()
 
     # Define model
-    torch.manual_seed(42)
+    torch.manual_seed(0)
     device = torch.device(config['summary_device'])
     model = StateSpaceModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", config['dataloader_stride'])
     # model = StateSpaceModel2()
@@ -109,7 +108,7 @@ def main():
                                    stride=dataloader_stride,
                                    order=filter_order,
                                    Wn=filter_Wn,
-                                   pad_length=5_040_000)
+                                   pad_length=6_880_000)
     val_loader = DataLoader(val_dataset,
                             shuffle=False,
                             collate_fn=collate_fn,
@@ -121,7 +120,7 @@ def main():
                                     stride=dataloader_stride,
                                     order=filter_order,
                                     Wn=filter_Wn,
-                                    pad_length=5_040_000)
+                                    pad_length=6_880_000)
     test_loader = DataLoader(test_dataset,
                              shuffle=False,
                              collate_fn=collate_fn,
@@ -214,6 +213,8 @@ def main():
 
                 # Calculate loss
                 mask = create_mask(labels)
+                if labels.shape[1] < outputs.shape[1]:
+                    outputs = outputs[:, :labels.shape[1], :]
                 loss = criterion(outputs[mask], labels[mask])
                 val_loss += loss
 
@@ -286,6 +287,11 @@ def main():
             # Send to CPU
             outputs = outputs.cpu().detach().numpy()
             labels = labels.cpu().detach().numpy()
+
+
+            if labels.shape[1] < outputs.shape[1]:
+                outputs = outputs[:, :labels.shape[1], :]
+
             outputs = np.squeeze(outputs, axis=2)
             labels = np.squeeze(labels, axis=2)
 
