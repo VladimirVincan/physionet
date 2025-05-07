@@ -35,19 +35,28 @@ def import_arousal_mat(fileName):
     }
     return arousals, sleepStages
 
-def plot_signal_segment(signal: np.ndarray, start_idx: int, end_idx: int):
+
+def plot_signal_segment(input_signal: np.ndarray, arousals: np.ndarray = None, start_idx: int = 0, end_idx: int = 6000):
     """
     Plots a segment of a multichannel signal.
 
     Parameters:
-    - signal: np.ndarray of shape (T, C), where T is time, and C is number of channels
+    - input_signal: np.ndarray of shape (T, C), where T is time, and C is number of channels
     - start_idx: int, start index for plotting
     - end_idx: int, end index for plotting
     """
-    if not (0 <= start_idx < end_idx <= signal.shape[0]):
+    if not (0 <= start_idx < end_idx <= input_signal.shape[0]):
         raise ValueError("Invalid start or end index")
 
-    segment = signal[start_idx:end_idx]
+    if arousals is not None and arousals.shape[0] != input_signal.shape[0]:
+        raise ValueError("Output input_signal must have the same length as input signal")
+
+    y_labels = ['F3-M2', 'F4-M1', 'C3-M2', 'C4-M1', 'O1-M2', 'O2-M1', 'E1-M2', 'Chin', 'ABD', 'Chest', 'Airflow', 'SaO2', 'ECG']
+    if arousals is not None:
+        input_signal = np.concatenate((arousals[:, np.newaxis], input_signal), axis=1)
+        y_labels = ['arousal'] + y_labels
+
+    segment = input_signal[start_idx:end_idx]
     num_channels = segment.shape[1]
 
     fig, axes = plt.subplots(num_channels, 1, figsize=(15, 2*num_channels), sharex=True)
@@ -58,7 +67,7 @@ def plot_signal_segment(signal: np.ndarray, start_idx: int, end_idx: int):
 
     for ch in range(num_channels):
         axes[ch].plot(time_indices, segment[:, ch])
-        axes[ch].set_ylabel(f'Ch {ch}')
+        axes[ch].set_ylabel(y_labels[ch])
         axes[ch].grid(True)
 
     axes[-1].set_xlabel("Time Index")
@@ -79,6 +88,14 @@ def main():
 
     split = 'train'
     idx = 0
+    starting_s = 1000
+    ending_s = 2000
+
+    starting = 200_000
+    ending = 400_000
+
+    starting = 280_000
+    ending = 290_000
 
     folder_dir =  settings['folder_dir']
     folder_name = settings[split][idx]
@@ -89,7 +106,8 @@ def main():
     input_signal = import_mat(mat_path)
     arousals, sleep_stages = import_arousal_mat(arousal_mat_path)
 
-    plot_signal_segment(input_signal, 0, 200*30)
+    # plot_signal_segment(input_signal, arousals, 200*starting_s, 200*ending_s)
+    plot_signal_segment(input_signal, arousals, starting, ending)
 
 if __name__ == '__main__':
     main()
