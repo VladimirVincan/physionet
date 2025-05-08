@@ -121,6 +121,24 @@ def import_arousal(folder_path, num_samples):
 
     return arousal_dict
 
+def make_xlim_callback(axs, input_signals, fig):
+    def on_xlim_change(event_ax):
+        new_xlim = event_ax.get_xlim()
+        start = int(max(0, np.floor(new_xlim[0])))
+        end = int(min(input_signals.shape[0], np.ceil(new_xlim[1])))
+        # print(new_xlim)
+        # print('xlim: ' + str(start) + ' ' + str(end))
+        for i, ax in enumerate(axs):
+            # print(input_signals.shape)
+            y_segment = input_signals[start:end, i]
+            ymin, ymax = np.min(y_segment), np.max(y_segment)
+            # print(ymin, ymax)
+            diff = ymax - ymin
+            ymax += diff*0.1
+            ymin -= diff*0.1
+            ax.set_ylim(ymin, ymax)
+        fig.canvas.draw_idle()
+    return on_xlim_change
 
 def plot_signal_segment(input_signal: np.ndarray, arousals: np.ndarray = None, arousals_dict = None, start_idx: int = 0, end_idx: int = 6000):
     """
@@ -156,10 +174,12 @@ def plot_signal_segment(input_signal: np.ndarray, arousals: np.ndarray = None, a
 
     time_indices = np.arange(start_idx, end_idx)
 
+    callback = make_xlim_callback(axes, input_signal, fig)
     for ch in range(num_channels):
         axes[ch].plot(time_indices, segment[:, ch])
         axes[ch].set_ylabel(y_labels[ch])
         axes[ch].grid(True)
+        axes[ch].callbacks.connect('xlim_changed', callback)
 
     axes[-1].set_xlabel("Time Index")
     fig.suptitle(f"Signal from index {start_idx} to {end_idx}", fontsize=14)
@@ -234,8 +254,8 @@ def main():
     ending = input_signal.shape[0]  # 4_000_000
 
     # plot_signal_segment(input_signal, arousals, 200*starting_s, 200*ending_s)
-    print(find_regions_of_ones(arousals))
-    print(find_regions_of_ones(arousals_dict['rera']))
+    # print(find_regions_of_ones(arousals))
+    # print(find_regions_of_ones(arousals_dict['rera']))
     plot_signal_segment(input_signal, arousals, arousals_dict, starting, ending)
 
     # record = wfdb.rdrecord(arousal_folder_path)
