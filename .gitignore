@@ -12,6 +12,6 @@ tensorboard/*
 dataset/*
 ~*
 login.sh
-*.yaml
+# *.yaml
 
 Physionet_PointFiveFour/

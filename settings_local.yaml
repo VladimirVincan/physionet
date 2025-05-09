@@ -15,3 +15,9 @@ validation:
 test:
   - tr03-0079
   - tr03-0083
+
+
+# testing only locally.
+split: train
+idx: 0
+# ------------

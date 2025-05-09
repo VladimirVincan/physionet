@@ -231,7 +231,7 @@ def main():
     with open(settingsName, 'r') as file:
         settings = yaml.safe_load(file)
 
-    split = 'validation'
+    split = 'test'
     idx = 1
 
 
