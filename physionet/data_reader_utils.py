@@ -10,13 +10,14 @@ import yaml
 
 # =================================== filepaths ===================================
 
-def get_filepaths_dict(settings):
+def get_filepaths_dict(settings, split=None, idx=None):
     """
     input: path to folder with all subfolders
     output: file/path names to util functions
     """
-    split = settings['split']
-    idx = settings['idx']
+    if split == None or idx == None:
+        split = settings['split']
+        idx = settings['idx']
     folder_dir =  settings['folder_dir']
     folder_name = settings[split][idx]
 
@@ -43,16 +44,57 @@ def get_filepaths_dict(settings):
 # =================================== Load wfdb ===================================
 
 def read_ann(wfdb_path):
+    """
+    record_name: folder_name
+    extension: 'arousal'
+    sample: array() of timestamps, 1xM where M is number of events
+    symbol: ?
+    subtype: array() of event codes, 1xM where M is number of events
+    aux_note: array() of event names, 1xM where M is number of events
+    fs: 200
+    label_store: ?, None
+    description: ?, None
+    custom_labels: ?, None
+    contained_labels: ?, None
+    ann_length: M, number of events
+    """
     ann = wfdb.rdann(wfdb_path, 'arousal')
     ann = ann.__dict__
-    print(ann)
-    pass
+    return ann
 
 def read_record(wfdb_path):
+    """
+    record_name: folder_name
+    n_sig: 13
+    fs: 200
+    counter_freq: ?, None
+    base_counter: ?, None
+    sig_len: ~5 million
+    base_time: ?, None
+    base_date: ?, None
+    comments: ?, []
+    sig_name: ['F3-M2', 'F4-M1', 'C3-M2', 'C4-M1', 'O1-M2', 'O2-M1', 'E1-M2', 'Chin1-Chin2', 'ABD', 'CHEST', 'AIRFLOW', 'SaO2', 'ECG']
+    p_signal: array() of n_sig x sig_len
+    d_signal: None
+    e_p_signal: None
+    e_d_signal: None
+    file_name: [record_name...]
+    fmt: ?, [16...]['16', '16', '16', '16', '16', '16', '16', '16', '16', '16', '16', '16', '16']
+    samps_per_frame: [1...][1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    skew: [None...][None, None, None, None, None, None, None, None, None, None, None, None, None]
+    byte_offset: [24...][24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24]
+    adc_gain: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 655.35, 1000.0]
+    baseline: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -32768, 0]
+    units: ['uV', 'uV', 'uV', 'uV', 'uV', 'uV', 'uV', 'uV', 'uV', 'uV', 'uV', '%', 'mV']
+    adc_res: [16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16]
+    adc_zero: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    init_value: [-9, 5, -5, 9, 5, 12, -21, 16, -41, -2, 39, 30496, -53]
+    checksum: [139, 1793, 1290, -357, 248, -96, -1068, -741, -31565, -21968, 2879, 9703, -1118]
+    block_size: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    """
     record = wfdb.rdrecord(wfdb_path)
     record = record.__dict__
-    print(record)
-    pass
+    return record
 
 # =================================== ! Load wfdb ! ===================================
 
@@ -73,6 +115,11 @@ def import_mat(fileName):
     - val (13xN): F3-M2, F4-M1, C3-M2, C4-M1, O1-M2, O2-M1, E1-M2, Chin, ABD, Chest, Airflow, SaO2, ECG
     '''
     return np.transpose(scipy.io.loadmat(fileName)['val'])
+
+def get_input_signal_position(signal_name):
+    signal_names = ['F3-M2', 'F4-M1', 'C3-M2', 'C4-M1', 'O1-M2', 'O2-M1', 'E1-M2', 'Chin1-Chin2', 'ABD', 'CHEST', 'AIRFLOW', 'SaO2', 'ECG']
+    position = signal_names.index(signal_name)
+    return position
 
 def import_arousal_mat(fileName):
     '''
@@ -168,6 +215,7 @@ def import_arousal(folder_path, num_samples):
     resp_hypopnea = get_respiratory_signal(annotation, 'resp_hypopnea', num_samples)
     resp_arousalrera = get_respiratory_signal(annotation, 'arousal_rera', num_samples)
 
+    # TODO: ukloniti posto je implementirano vec u -arousal.mat fajlu
     wake_signal = get_sleep_stage_signal(annotation, 'W', num_samples)
     nrem1_signal = get_sleep_stage_signal(annotation, 'N1', num_samples)
     nrem2_signal = get_sleep_stage_signal(annotation, 'N2', num_samples)
@@ -204,7 +252,9 @@ def main():
 
     filepaths_dict = get_filepaths_dict(settings)
     print(filepaths_dict)
-    input_data, output_data = _data(filepaths_dict)
+    # input_data, output_data = _data(filepaths_dict)
+    # print(read_ann(filepaths_dict['wfdb_path']))
+    # print(read_record(filepaths_dict['wfdb_path']))
 
 
 

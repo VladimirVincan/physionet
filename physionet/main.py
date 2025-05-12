@@ -1,0 +1,41 @@
+import gc as garbageCollector
+import os
+import sys
+
+import torch
+import yaml
+from torch.utils.data import DataLoader
+from torchinfo import summary
+
+from dataset import PhysionetDataset
+from ssm import StateSpaceModel
+from train import train_loop
+
+
+def main():
+    if len(sys.argv) == 2:
+        settings_name = sys.argv[1].strip()
+    else:
+        print('How to use: python main.py settings_local.yaml')
+        return
+
+    torch.manual_seed(0)
+
+    with open(settings_name, 'r') as file:
+        settings = yaml.safe_load(file)
+
+    train_data = PhysionetDataset('train', settings)
+    validation_data = PhysionetDataset('validation', settings)
+    # test_data = PhysionetDataset('test', settings)
+
+    train_dataloader = DataLoader(train_data, batch_size=settings['train_batch_size'], shuffle=True)
+    validation_dataloader = DataLoader(validation_data, batch_size=settings['test_batch_size'], shuffle=True)
+
+    dataloader_stride = 1
+    model = StateSpaceModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
+    model.to(settings['device'])
+
+    train_loop(model, train_dataloader, validation_dataloader, settings)
+
+if __name__ == '__main__':
+    main()
