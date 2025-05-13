@@ -16,13 +16,14 @@ def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
                     settings, total_steps, epoch, writer):
     model.train()
     train_loss = 0.0
+    epoch_start = time.time()
 
     for batch_idx, _data in enumerate(dataloader):
         inputs, labels = _data
         inputs = inputs.to(settings['device'])
         labels = labels.to(settings['device'])
 
-        start = time.time()
+        batch_start = time.time()
         optimizer.zero_grad()
         outputs = model(inputs)
 
@@ -32,14 +33,16 @@ def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
         loss.backward()
         optimizer.step()
         scheduler.step()
-        end = time.time()
+        batch_end = time.time()
 
         train_loss += loss
         total_steps += 1
 
-        writer.add_scalar('train/batch_time', end - start, total_steps)
+        writer.add_scalar('train/batch_time', batch_end - batch_start, total_steps)
         writer.add_scalar('train/lr', scheduler.get_last_lr()[0], total_steps)
 
+    epoch_end = time.time()
+    writer.add_scalar('train/epoch_time', epoch_end - epoch_start, epoch)
     writer.add_scalar('train/loss', train_loss / len(dataloader), epoch)
     writer.add_scalar('train/total_steps', total_steps, epoch)
 
@@ -49,6 +52,7 @@ def validate(model, dataloader, criterion, settings, total_steps, epoch,
     model.eval()
     score = Challenge2018Score()
     val_loss = 0.0
+    epoch_start = time.time()
 
     with torch.no_grad():
         for batch_idx, _data in enumerate(dataloader):
@@ -83,10 +87,13 @@ def validate(model, dataloader, criterion, settings, total_steps, epoch,
 
         auroc_g = score.gross_auroc()
         auprc_g = score.gross_auprc()
+        epoch_end = time.time()
+
         print('AUPRC: %f, AUROC: %f' % (auprc_g, auroc_g))
         writer.add_scalar('validation/AUROC', auroc_g, epoch)
         writer.add_scalar('validation/AUPRC', auprc_g, epoch)
         writer.add_scalar('validation/loss', val_loss / len(dataloader), epoch)
+        writer.add_scalar('validation/epoch_time', epoch_end - epoch_start, epoch)
 
     return auprc_g
 

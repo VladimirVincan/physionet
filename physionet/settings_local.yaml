@@ -3,7 +3,7 @@ reduction_factor: 50
 
 
 # paths
-folder_dir: challenge-2018/training
+folder_dir: ../challenge-2018/training
 output_path: out
 summary_writer: "tensorboard"
 model_name: "best_model.pt"

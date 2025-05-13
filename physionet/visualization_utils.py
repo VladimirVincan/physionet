@@ -166,10 +166,13 @@ def find_regions_of_ones(signal: np.ndarray):
 
 
 def main():
+    """
+    View raw data files without preprocessing.
+    """
     if len(sys.argv) == 2:
         settings_name = sys.argv[1].strip()
     else:
-        print('How to use: python main.py settings_local.yaml')
+        print('How to use: python visualization_utils.py settings_local.yaml')
         return
 
     with open(settings_name, 'r') as file:
