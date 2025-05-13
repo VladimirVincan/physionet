@@ -7,7 +7,7 @@ import yaml
 from torch.utils.data import DataLoader
 from torchinfo import summary
 
-from dataset import PhysionetDataset
+from dataset import PhysionetDataset, NormalizedPhysionetDataset
 from dummy_model import DummyModel
 from ssm import StateSpaceModel
 from train import train_loop
@@ -25,17 +25,32 @@ def main():
     with open(settings_name, 'r') as file:
         settings = yaml.safe_load(file)
 
-    train_data = PhysionetDataset('train', settings)
-    validation_data = PhysionetDataset('validation', settings)
+    train_data = NormalizedPhysionetDataset('train', settings)
+    validation_data = NormalizedPhysionetDataset('validation', settings)
     # test_data = PhysionetDataset('test', settings)
 
-    train_dataloader = DataLoader(train_data, batch_size=settings['train_batch_size'], shuffle=True)
-    validation_dataloader = DataLoader(validation_data, batch_size=settings['test_batch_size'], shuffle=True)
+    train_dataloader = DataLoader(train_data, batch_size=settings['train_batch_size'], shuffle=True, num_workers=settings['num_workers'])
+    validation_dataloader = DataLoader(validation_data, batch_size=settings['test_batch_size'], shuffle=True, num_workers=settings['num_workers'])
 
     dataloader_stride = 1
     # model = StateSpaceModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
     model = DummyModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
     model.to(settings['device'])
+
+    summary(model,
+            eval(settings['summary_shape']),
+            device=settings['device'],
+            verbose=1,
+            depth=5,
+            col_names=[
+                'input_size',
+                'output_size',
+                "num_params",
+                "params_percent",
+                "kernel_size",
+                "mult_adds",
+                "trainable",
+            ])
 
     train_loop(model, train_dataloader, validation_dataloader, settings)
 

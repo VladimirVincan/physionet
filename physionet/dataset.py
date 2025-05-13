@@ -63,7 +63,6 @@ class NormalizedPhysionetDataset(PhysionetDataset):
         return normalized
 
     def preprocess_input_signals(self, input_signals):
-        input_signals = input_signals.astype(np.float32)
 
         # Apply min-max normalization per channel
         # ['F3-M2', 'F4-M1', 'C3-M2', 'C4-M1', 'O1-M2', 'O2-M1', 'E1-M2', 'Chin1-Chin2', 'ABD', 'CHEST', 'AIRFLOW', 'SaO2', 'ECG']
@@ -72,6 +71,7 @@ class NormalizedPhysionetDataset(PhysionetDataset):
         input_signals = np.clip(input_signals, min_vals, max_vals)
         # input_signals = self.normalize_columns(input_signals, min_vals, max_vals)
 
+        input_signals = input_signals.astype(np.float32)
         return input_signals
         # return torch.tensor(input_signals)
 
