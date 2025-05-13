@@ -82,6 +82,8 @@ def validate(model, dataloader, criterion, settings, total_steps, epoch,
                 score.score_record(label, output, record_name)
             end = time.time()
 
+            total_steps += 1
+
             writer.add_scalar('validation/batch_time', end - start,
                               total_steps)
 
