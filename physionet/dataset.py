@@ -1,3 +1,5 @@
+import numpy as np
+import torch
 from torch.utils.data import Dataset
 
 from data_reader_utils import (get_filepaths_dict, get_input_signal_position,
@@ -25,10 +27,13 @@ class PhysionetDataset(Dataset):
         return input_signals, output_signals
 
     def preprocess_input_signals(self, input_signals):
+        input_signals = input_signals.astype(np.float32)
+        input_signals = torch.Tensor(input_signals)
         return input_signals
 
     def combine_outputs(self, output_signal, arousal_signals):
-        return arousal_signals['rera']
+        output_signals = arousal_signals['rera']
+        output_signals = torch.Tensor(output_signals)
         return output_signal
 
 

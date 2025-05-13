@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from torchinfo import summary
 
 from dataset import PhysionetDataset
+from dummy_model import DummyModel
 from ssm import StateSpaceModel
 from train import train_loop
 
@@ -32,7 +33,8 @@ def main():
     validation_dataloader = DataLoader(validation_data, batch_size=settings['test_batch_size'], shuffle=True)
 
     dataloader_stride = 1
-    model = StateSpaceModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
+    # model = StateSpaceModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
+    model = DummyModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
     model.to(settings['device'])
 
     train_loop(model, train_dataloader, validation_dataloader, settings)

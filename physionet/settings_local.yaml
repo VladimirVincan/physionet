@@ -1,0 +1,40 @@
+num_channels: 12
+reduction_factor: 50
+
+
+# paths
+folder_dir: challenge-2018/training
+output_path: out
+summary_writer: "tensorboard"
+model_name: "best_model.pt"
+# ------------
+
+
+# training params
+device: cpu
+epochs: 2
+train_batch_size: 1
+test_batch_size: 1
+pos_weight: 10.0
+max_lr: 4e-3
+warmstart_percentage: 0.05
+# ------------
+
+
+# splits
+train:
+  - tr03-0005
+  - tr03-0029
+validation:
+  - tr03-0052
+  - tr03-0078
+test:
+  - tr03-0079
+  - tr03-0083
+# ------------
+
+
+# testing only locally.
+split: train
+idx: 0
+# ------------

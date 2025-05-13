@@ -1,8 +1,10 @@
 challenge-2018
 training
 test
+.env
 sample/__pycache__/*
 mamba/__pycache__/*
+physionet/__pycache__/*
 log/*
 mamba/log/*
 *.csv
@@ -13,5 +15,9 @@ dataset/*
 ~*
 login.sh
 # *.yaml
+toolbox/*
+graph/*
+*.profile
+*.pt
 
 Physionet_PointFiveFour/

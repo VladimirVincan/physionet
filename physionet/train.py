@@ -1,107 +1,138 @@
+# import copy
+import os
+import time
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
+
+from score2018 import Challenge2018Score
+from utils import create_mask
 
 
-def calculate_loss(feats, outputSignal, model, arousal_criterion, apnea_criterion, wake_criterion, settings):
-        outputSignal = outputSignal[:, ::settings['reduction_factor'], :]
-        arousalTargs = outputSignal[:, :, 0]
-        apneaTargs = outputSignal[:, :, 1]
-        wakeTargs = outputSignal[:, :, 2]
-
-        feats = feats.permute(0, 2, 1)
-        feats = feats.to(settings['device'])
-        arousalTargs = arousalTargs.to(settings['device'])
-        apneaTargs = apneaTargs.to(settings['device'])
-        wakeTargs = wakeTargs.to(settings['device'])
-
-        arousalOutputs, apneaHypopneaOutputs, sleepStageOutputs = model(feats) #Compute the network outputs on the batch, (x1, x2, x3) u model.py
-        arousalOutputs = arousalOutputs.permute(0, 2, 1).contiguous().view(-1, 2).float() #Compute the losses
-        arousalTargs = arousalTargs.permute(1, 0).contiguous().view(-1).long()
-        apneaHypopneaOutputs = apneaHypopneaOutputs.permute(0, 2, 1).contiguous().view(-1, 2).float() #preuredjuje dimenzije za Loss funkciju
-        apneaTargs = apneaTargs.permute(1, 0).contiguous().view(-1).long()
-        sleepStageOutputs = sleepStageOutputs.permute(0, 2, 1).contiguous().view(-1, 2).float()
-        wakeTargs = wakeTargs.permute(1, 0).contiguous().view(-1).long()
-
-        arousalLoss = arousal_criterion(arousalOutputs, arousalTargs) #prosledjuje izlaze sa ocekivanim i racuna gubitak
-        apneaHypopneaLoss = apnea_criterion(apneaHypopneaOutputs, apneaTargs)
-        sleepStageLoss = wake_criterion(sleepStageOutputs, wakeTargs)
-
-        loss = ((2*arousalLoss) + apneaHypopneaLoss + sleepStageLoss) / 4.0 #zbirni gubitak, where the target arousal loss weight is set to 2 and the weights of other task losses are set to 1, since the auxiliary tasks are less important than the desired task (pise u 0.54.pdf)
-
-        return loss
-
-
-def train_one_epoch(model, dataloader, criterion, scheduler, optimizer, settings):
+def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
+                    settings, total_steps, epoch, writer):
     model.train()
-    runningLoss = 0.0  # za zbir gubitka u epohi
+    train_loss = 0.0
 
-    truths=[]
-    fileNames=[]
-    folders=[]
-    # for idx in range(numBatchesPerEpoch):
-    for batch_idx, (folderName, feats, outputSignal) in enumerate(dataloader):
-        print('batch_idx: ' + str(batch_idx), flush=True)
-        # truths.append(outputSignal[batch_idx])
-        folders = list(folderName)
+    for batch_idx, _data in enumerate(dataloader):
+        inputs, labels = _data
+        inputs = inputs.to(settings['device'])
+        labels = labels.to(settings['device'])
 
-        optimizer.zero_grad() #resetovanje gradijenata
-        loss = calculate_loss(feats, outputSignal, model, arousal_criterion, apnea_criterion, wake_criterion, settings)
-        loss.backward() #Backpropagation izracunavanje gradijenata
-        runningLoss += loss.data.cpu().numpy() #dodavanje trenutnog gubitka u ukupni
+        start = time.time()
+        optimizer.zero_grad()
+        outputs = model(inputs)
 
-        optimizer.step() #azuriranje parametara modela
+        mask = create_mask(labels)
+        loss = criterion(outputs[mask], labels[mask])
 
-    # fileNames=[OUTPUT_PATH + '/' + folderName + '.vec' for folderName in folders]
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+        end = time.time()
 
-    epoch_loss = runningLoss / float(settings['train_batch_size'])
-    # epoch_auprc = count_aurpc(truths, fileNames)
-    epoch_auprc = 0
-    return epoch_loss, epoch_auprc
+        train_loss += loss
+        total_steps += 1
+
+        writer.add_scalar('train/batch_time', end - start, total_steps)
+        writer.add_scalar('train/lr', scheduler.get_last_lr()[0], total_steps)
+
+    writer.add_scalar('train/loss', train_loss / len(dataloader), epoch)
+    writer.add_scalar('train/total_steps', total_steps, epoch)
 
 
-def validate(model, dataloader, criterion, settings):
+def validate(model, dataloader, criterion, settings, total_steps, epoch,
+             writer):
     model.eval()
-    runningLoss = 0.0
-
-    truths=[]
-    fileNames=[]
+    score = Challenge2018Score()
+    val_loss = 0.0
 
     with torch.no_grad():
-        for _, (folderName, feats, outputSignal) in enumerate(dataloader):
-            truths.append(outputSignal)
-            fileNames.append(OUTPUT_PATH + '/' + folderName + '.vec')
+        for batch_idx, _data in enumerate(dataloader):
+            inputs, labels = _data
+            inputs = inputs.to(settings['device'])
+            labels = labels.to(settings['device'])
 
-            loss = calculate_loss(feats, outputSignal, model, arousalCriterion, apneaCriterion, wakeCriterion, settings)
-            runningLoss += loss.data.cpu().numpy() #dodavanje trenutnog gubitka u ukupni
+            start = time.time()
+            outputs = model(inputs)
 
-    epochLoss = runningLoss / float(settings['train_batch_size'])
-    # epochAuprc = count_aurpc(truths, fileNames)
-    epochAuprc = 0
-    return epochLoss, epochAuprc
+            mask = create_mask(labels)
+            loss = criterion(outputs[mask], labels[mask])
+            val_loss += loss
+
+            outputs = outputs.cpu().detach().numpy()
+            labels = labels.cpu().detach().numpy()
+            # print(outputs.shape)
+            # print(labels.shape)
+            # outputs = np.squeeze(outputs, axis=2)
+            # labels = np.squeeze(labels, axis=2)
+
+            for i, (output, label) in enumerate(zip(outputs, labels)):
+                record_name = str(batch_idx) + ' ' + str(i)
+                # print(record_name)
+                # print(output.shape)
+                # print(output)
+                score.score_record(label, output, record_name)
+            end = time.time()
+
+            writer.add_scalar('validation/batch_time', end - start,
+                              total_steps)
+
+        auroc_g = score.gross_auroc()
+        auprc_g = score.gross_auprc()
+        print('AUPRC: %f, AUROC: %f' % (auprc_g, auroc_g))
+        writer.add_scalar('validation/AUROC', auroc_g, epoch)
+        writer.add_scalar('validation/AUPRC', auprc_g, epoch)
+        writer.add_scalar('validation/loss', val_loss / len(dataloader), epoch)
+
+    return auprc_g
 
 
 def train_loop(model, train_dataloader, validation_dataloader, settings):
     criterion = nn.BCEWithLogitsLoss(
-        pos_weight=torch.tensor([settings['pos_weight']])).to(settings['device'])
+        pos_weight=torch.tensor([settings['pos_weight']])).to(
+            settings['device'])
     optimizer = optim.AdamW(model.parameters())
-    scheduler = optim.lr_scheduler.OneCycleLR(optimizer,
-                                              max_lr=settings['max_lr'],
-                                              pct_start=settings['warmstart_percentage'],
-                                              steps_per_epoch=int(
-                                                  len(train_dataloader)),
-                                              epochs=settings['epochs'],
-                                              anneal_strategy='linear')
+    scheduler = optim.lr_scheduler.OneCycleLR(
+        optimizer,
+        max_lr=float(settings['max_lr']),
+        pct_start=settings['warmstart_percentage'],
+        steps_per_epoch=int(len(train_dataloader)),
+        epochs=settings['epochs'],
+        anneal_strategy='linear')
+
+    total_steps = 0
+    best_auprc = 0.0
+    best_epoch = 0
+    # best_model = copy.deepcopy(model)
+    writer = SummaryWriter(log_dir=settings['summary_writer'])
 
     for epoch in range(1, settings['epochs'] + 1):
-        print('============ TRAIN EPOCH: ' + str(epoch) + ' ============', flush=True)
-        trainLoss, trainAuprc = train_one_epoch(model, train_dataloader, criterion, scheduler, optimizer, settings)
-        valLoss, valAuprc = validate(model, validation_dataloader, criterion, settings)
+        print('============ EPOCH: ' + str(epoch) + ' ============',
+              flush=True)
+        train_one_epoch(model, train_dataloader, criterion, scheduler,
+                        optimizer, settings, total_steps, epoch, writer)
+        val_auprc = validate(model, validation_dataloader, criterion, settings,
+                             total_steps, epoch, writer)
 
-        checkpointPath = f'./TrainedModels/checkpoint_{epoch}.pth'
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict()
-        }, checkpointPath)
+        if best_auprc < val_auprc:
+            print('best auprc: %f, best epoch: %d' % (val_auprc, epoch))
+            if os.path.exists(settings['model_name']):
+                os.remove(settings['model_name'])
 
+            best_auprc = val_auprc
+            # best_model = copy.deepcopy(model)
+            best_epoch = epoch
+
+            torch.save(
+                {
+                    'epoch': epoch,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()
+                }, settings['model_name'])
+
+        writer.flush()
+    writer.close()

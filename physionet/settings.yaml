@@ -1,11 +1,27 @@
+num_channels: 12
+reduction_factor: 50
+
+
+# paths
 folder_dir: /data/physionet/challenge-2018/training
 output_path: /out
-train_batch_size: 2
-test_batch_size: 2
-epochs: 10
-num_channels: 12
+summary_writer: "/out/tensorboard"
+model_name: "/out/best_model.pt"
+# ------------
+
+
+# training params
 device: cuda
-reduction_factor: 50
+epochs: 10
+train_batch_size: 1
+test_batch_size: 1
+pos_weight: 10.0
+max_lr: 4e-3
+warmstart_percentage: 0.05
+# ------------
+
+
+# splits
 train:
   - tr05-1097
   - tr06-0103
@@ -1003,3 +1019,9 @@ test:
   - tr10-0707
   - tr12-0097
   - tr13-0076
+
+
+# testing only locally.
+split: train
+idx: 0
+# ------------
