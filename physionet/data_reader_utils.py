@@ -2,7 +2,6 @@ import os
 import sys
 
 import h5py
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io
 import wfdb
