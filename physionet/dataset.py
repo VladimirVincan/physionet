@@ -75,6 +75,26 @@ class NormalizedPhysionetDataset(PhysionetDataset):
         return input_signals
         # return torch.tensor(input_signals)
 
+class DeepSleepDataset(PhysionetDataset):
+    def preprocess_input_signals(self, input_signals):
+        total_length = 8_388_608  # 2**23
+        signal_length = input_signals.shape[0]
+        pad_length = total_length - signal_length
+
+        input_signals = np.pad(input_signals, ((0, pad_length), (0, 0)), mode='constant')
+        input_signals = input_signals.astype(np.float32)
+
+        return input_signals
+
+    def combine_outputs(self, output_signal, arousal_signals):
+        total_length = 8_388_608  # 2**23
+        signal_length = output_signal.shape[0]
+        pad_length = total_length - signal_length
+
+        output_signals = np.pad(output_signal, ((0, pad_length)), mode='constant')
+
+        return output_signals
+
 
 def main():
     import sys

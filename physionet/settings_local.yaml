@@ -21,7 +21,7 @@ num_workers: 4
 # other
 num_channels: 12
 reduction_factor: 50
-summary_shape: 5000000
+summary_shape: "(1, 1048576, 13)"
 # ------------
 
 

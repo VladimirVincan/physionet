@@ -19,5 +19,6 @@ toolbox/*
 graph/*
 *.profile
 *.pt
+physionet/tensorboard/*
 
 Physionet_PointFiveFour/
