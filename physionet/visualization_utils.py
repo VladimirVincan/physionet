@@ -164,6 +164,10 @@ def find_regions_of_ones(signal: np.ndarray):
     regions = list(zip(starts, ends))
     return regions
 
+def filter_dict_by_keys(arousal_signals, settings):
+    keys_to_keep = settings['arousals_to_visualise']
+    return {k: v for k, v in arousal_signals.items() if k in keys_to_keep}
+
 
 def main():
     """
@@ -183,6 +187,7 @@ def main():
     output_signal, _ = import_arousal_mat(filepaths_dict['arousal_mat_path'])
     num_samples = output_signal.shape[0]  # (N, 1) -> N
     arousal_signals = import_arousal(filepaths_dict['wfdb_path'], num_samples)
+    arousal_signals = filter_dict_by_keys(arousal_signals, settings)
 
     starting = 0  # 100_000
     ending = num_samples  # 4_000_000

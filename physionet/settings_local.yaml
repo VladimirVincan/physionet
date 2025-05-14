@@ -18,6 +18,11 @@ num_workers: 4
 # ------------
 
 
+# testing params
+test_csv_name: "outputs.csv"
+# ------------
+
+
 # other
 num_channels: 12
 reduction_factor: 50
@@ -41,4 +46,15 @@ test:
 # testing only locally.
 split: train
 idx: 0
+arousals_to_visualise:
+  # - "obst"
+  # - "cent"
+  # - "mix"
+  # - "hypo"
+  - "rera"
+  # - "wake"
+  # - "nrem1"
+  # - "nrem2"
+  # - "nrem3"
+  # - "rem"
 # ------------

@@ -28,6 +28,8 @@ class PhysionetDataset(Dataset):
 
         if self.return_arousal_signals:
             return input_signals, output_signals, arousal_signals
+        elif self.split == 'test':
+            return input_signals, output_signals, filepaths_dict['folder_name']
         return input_signals, output_signals
 
     def preprocess_input_signals(self, input_signals):

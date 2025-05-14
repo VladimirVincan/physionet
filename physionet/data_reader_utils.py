@@ -29,6 +29,7 @@ def get_filepaths_dict(settings, split=None, idx=None):
     arousal_path = os.path.join(folder_path, folder_name + '.arousal')
 
     filepaths_dict = {
+        'folder_name': folder_name,
         'wfdb_path': wfdb_path,
         'mat_path': mat_path,
         'arousal_mat_path': arousal_mat_path,
