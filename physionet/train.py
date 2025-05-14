@@ -13,7 +13,7 @@ from utils import create_mask
 
 
 def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
-                    settings, total_steps, epoch, writer):
+                    settings, current_params, writer):
     model.train()
     train_loss = 0.0
     epoch_start = time.time()
@@ -47,7 +47,7 @@ def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
     writer.add_scalar('train/total_steps', total_steps, epoch)
 
 
-def validate(model, dataloader, criterion, settings, total_steps, epoch,
+def validate(model, dataloader, criterion, settings, current_params,
              writer):
     model.eval()
     score = Challenge2018Score()
@@ -113,9 +113,13 @@ def train_loop(model, train_dataloader, validation_dataloader, settings):
         epochs=settings['epochs'],
         anneal_strategy='linear')
 
-    total_steps = 0
-    best_auprc = 0.0
-    best_epoch = 0
+    current_params = {
+        'total_steps': 0,
+        'epoch': 0,
+        'best_auprc': 0.0,
+        'best_epoch': 0
+    }
+
     # best_model = copy.deepcopy(model)
     writer = SummaryWriter(log_dir=settings['summary_writer'])
 
@@ -123,9 +127,9 @@ def train_loop(model, train_dataloader, validation_dataloader, settings):
         print('============ EPOCH: ' + str(epoch) + ' ============',
               flush=True)
         train_one_epoch(model, train_dataloader, criterion, scheduler,
-                        optimizer, settings, total_steps, epoch, writer)
+                        optimizer, settings, current_params, writer)
         val_auprc = validate(model, validation_dataloader, criterion, settings,
-                             total_steps, epoch, writer)
+                             current_params, writer)
 
         if best_auprc < val_auprc:
             print('best auprc: %f, best epoch: %d' % (val_auprc, epoch))
@@ -138,7 +142,7 @@ def train_loop(model, train_dataloader, validation_dataloader, settings):
 
             torch.save(
                 {
-                    'epoch': epoch,
+                    'current_params': current_params,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()
                 }, settings['model_name'])

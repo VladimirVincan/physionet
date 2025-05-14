@@ -87,6 +87,7 @@ class DeepSleepDataset(PhysionetDataset):
         return input_signals
 
     def combine_outputs(self, output_signal, arousal_signals):
+        output_signal = arousal_signals['rera']
         total_length = 8_388_608  # 2**23
         signal_length = output_signal.shape[0]
         pad_length = total_length - signal_length

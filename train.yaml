@@ -1,7 +1,7 @@
 datasets: ['87442793-7a29-406f-8a46-9eefe3783828']
 experiment: physionet
 cpu: 128
-ram: 128G
+ram: 192G
 gpu:
       number: 1
 shm: 32G
