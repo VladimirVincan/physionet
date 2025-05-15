@@ -194,6 +194,7 @@ def main():
         settings = yaml.safe_load(file)
 
     filepaths_dict = get_filepaths_dict(settings)
+    print(filepaths_dict['folder_name'])
     input_signals = import_mat(filepaths_dict['mat_path'])
     output_signal, _ = import_arousal_mat(filepaths_dict['arousal_mat_path'])
     num_samples = output_signal.shape[0]  # (N, 1) -> N
