@@ -84,7 +84,7 @@ def make_xlim_callback(axs, input_signals, fig):
         fig.canvas.draw_idle()
     return on_xlim_change
 
-def plot_signal_segment(input_signal: np.ndarray, arousals: np.ndarray = None, arousals_dict = None, start_idx: int = 0, end_idx: int = 6000):
+def plot_signal_segment(input_signal: np.ndarray, arousals: np.ndarray = None, arousals_dict = None, prediction = None, start_idx: int = 0, end_idx: int = 6000):
     """
     Plots a segment of a multichannel signal.
 
@@ -104,6 +104,11 @@ def plot_signal_segment(input_signal: np.ndarray, arousals: np.ndarray = None, a
     for key, value in arousals_dict.items():
         input_signal = np.concatenate((value[:, np.newaxis], input_signal), axis=1)
         y_labels = [key] + y_labels
+
+    if prediction is not None:
+        # pred shape: (1, N) -> pret.T shape: (N, 1)
+        input_signal = np.concatenate((prediction.T, input_signal), axis=1)
+        y_labels = ['pred'] + y_labels
 
     if arousals is not None:
         input_signal = np.concatenate((arousals[:, np.newaxis], input_signal), axis=1)
@@ -168,6 +173,12 @@ def filter_dict_by_keys(arousal_signals, settings):
     keys_to_keep = settings['arousals_to_visualise']
     return {k: v for k, v in arousal_signals.items() if k in keys_to_keep}
 
+def import_prediction(output_path):
+    output_signal = None
+    if os.path.exists(output_path):
+        output_signal = np.load(output_path)
+    return output_signal
+
 
 def main():
     """
@@ -188,11 +199,12 @@ def main():
     num_samples = output_signal.shape[0]  # (N, 1) -> N
     arousal_signals = import_arousal(filepaths_dict['wfdb_path'], num_samples)
     arousal_signals = filter_dict_by_keys(arousal_signals, settings)
+    prediction_signal = import_prediction(filepaths_dict['outputs_path'])
 
     starting = 0  # 100_000
     ending = num_samples  # 4_000_000
 
-    plot_signal_segment(input_signals, output_signal, arousal_signals, starting, ending)
+    plot_signal_segment(input_signals, output_signal, arousal_signals, prediction_signal, starting, ending)
 
 if __name__ == '__main__':
     main()

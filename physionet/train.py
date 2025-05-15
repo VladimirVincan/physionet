@@ -19,7 +19,7 @@ def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
     epoch_start = time.time()
 
     for batch_idx, _data in enumerate(dataloader):
-        inputs, labels = _data
+        inputs, labels, _ = _data  # TODO: add num_samples
         inputs = inputs.to(settings['device'])
         labels = labels.to(settings['device'])
 
@@ -56,7 +56,7 @@ def validate(model, dataloader, criterion, settings, current_params,
 
     with torch.no_grad():
         for batch_idx, _data in enumerate(dataloader):
-            inputs, labels = _data
+            inputs, labels, _, num_samples = _data
             inputs = inputs.to(settings['device'])
             labels = labels.to(settings['device'])
 
@@ -69,6 +69,9 @@ def validate(model, dataloader, criterion, settings, current_params,
 
             outputs = outputs.cpu().detach().numpy()
             labels = labels.cpu().detach().numpy()
+
+            outputs = outputs[:, :num_samples]
+            labels = labels[:, :num_samples]
             # print(outputs.shape)
             # print(labels.shape)
             # outputs = np.squeeze(outputs, axis=2)

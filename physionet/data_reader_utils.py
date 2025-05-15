@@ -27,6 +27,7 @@ def get_filepaths_dict(settings, split=None, idx=None):
     mat_path = os.path.join(folder_path, folder_name + '.mat')
     hea_path = os.path.join(folder_path, folder_name + '.hea')
     arousal_path = os.path.join(folder_path, folder_name + '.arousal')
+    outputs_path = os.path.join(folder_path, folder_name + '.npy')
 
     filepaths_dict = {
         'folder_name': folder_name,
@@ -34,7 +35,8 @@ def get_filepaths_dict(settings, split=None, idx=None):
         'mat_path': mat_path,
         'arousal_mat_path': arousal_mat_path,
         'hea_path': hea_path,
-        'arousal_path': arousal_path
+        'arousal_path': arousal_path,
+        'outputs_path': outputs_path
     }
 
     return filepaths_dict

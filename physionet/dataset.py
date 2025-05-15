@@ -28,8 +28,10 @@ class PhysionetDataset(Dataset):
 
         if self.return_arousal_signals:
             return input_signals, output_signals, arousal_signals
-        elif self.split == 'test':
-            return input_signals, output_signals, filepaths_dict['folder_name']
+        elif self.split == 'test' or self.split == 'validation':
+            return input_signals, output_signals, filepaths_dict, num_samples
+        # elif self.split == 'validation':
+        #     return input_signals, output_signals, num_samples
         return input_signals, output_signals
 
     def preprocess_input_signals(self, input_signals):
@@ -94,7 +96,7 @@ class DeepSleepDataset(PhysionetDataset):
         signal_length = output_signal.shape[0]
         pad_length = total_length - signal_length
 
-        output_signals = np.pad(output_signal, ((0, pad_length)), mode='constant')
+        output_signals = np.pad(output_signal, ((0, pad_length)), mode='constant', constant_values=-1)
 
         return output_signals
 
