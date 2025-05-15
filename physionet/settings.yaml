@@ -12,7 +12,7 @@ epochs: 200
 train_batch_size: 1
 test_batch_size: 1
 pos_weight: 10.0
-max_lr: 1e-2
+max_lr: 1e-3
 warmstart_percentage: 0.05
 num_workers: 8
 # ------------
