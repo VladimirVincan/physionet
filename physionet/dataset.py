@@ -27,6 +27,7 @@ class PhysionetDataset(Dataset):
         output_signals = self.combine_outputs(output_signal, arousal_signals)
 
         if self.return_arousal_signals:
+            arousal_signals = self.preprocess_arousal_signals(arousal_signals)
             return input_signals, output_signals, arousal_signals
         elif self.split == 'test' or self.split == 'validation':
             return input_signals, output_signals, filepaths_dict, num_samples
@@ -38,6 +39,9 @@ class PhysionetDataset(Dataset):
         input_signals = input_signals.astype(np.float32)
         # input_signals = torch.Tensor(input_signals)
         return input_signals
+
+    def combine_outputs(self, arousal_signals):
+        return arousal_signals
 
     def combine_outputs(self, output_signal, arousal_signals):
         # output_signals = arousal_signals['rera']
@@ -80,23 +84,49 @@ class NormalizedPhysionetDataset(PhysionetDataset):
         # return torch.tensor(input_signals)
 
 class DeepSleepDataset(PhysionetDataset):
+    def clip(self, input_signals):
+        min_vals = [-200, -200, -200, -200, -200, -200, -200, -200, -500, -400, -200, 25000, -1200]
+        max_vals = [ 200,  200,  200,  200,  200,  200,  200,  200,  500,  400,  200, 35000,  1200]
+        input_signals = np.clip(input_signals, min_vals, max_vals)
+        min_vals = np.array(min_vals).reshape(-1, 1)  # Shape (13, 1)
+        max_vals = np.array(max_vals).reshape(-1, 1)  # Shape (13, 1)
+        denom = max_vals - min_vals
+        input_signals = (input_signals - (max_vals.T + min_vals.T)/2) / denom.T
+        return input_signals
+
     def preprocess_input_signals(self, input_signals):
         total_length = 8_388_608  # 2**23
         signal_length = input_signals.shape[0]
         pad_length = total_length - signal_length
+        left_pad = pad_length // 2
+        right_pad = pad_length - left_pad
 
-        input_signals = np.pad(input_signals, ((0, pad_length), (0, 0)), mode='constant')
+        input_signals = self.clip(input_signals)
+        input_signals = np.pad(input_signals, ((left_pad, right_pad), (0, 0)), mode='constant')
         input_signals = input_signals.astype(np.float32)
 
         return input_signals
+
+    def preprocess_arousal_signals(self, arousal_signals):
+        total_length = 8_388_608  # 2**23
+
+        for key, lst in arousal_signals.items():
+            signal_length = len(lst)
+            pad_length = total_length - signal_length
+            left_pad = pad_length // 2
+            right_pad = pad_length - left_pad
+            arousal_signals[key] = np.pad(lst, ((left_pad, right_pad)), mode='constant')
+        return arousal_signals
 
     def combine_outputs(self, output_signal, arousal_signals):
         output_signal = arousal_signals['rera']
         total_length = 8_388_608  # 2**23
         signal_length = output_signal.shape[0]
         pad_length = total_length - signal_length
+        left_pad = pad_length // 2
+        right_pad = pad_length - left_pad
 
-        output_signals = np.pad(output_signal, ((0, pad_length)), mode='constant', constant_values=-1)
+        output_signals = np.pad(output_signal, ((left_pad, right_pad)), mode='constant', constant_values=-1)
 
         return output_signals
 
@@ -120,7 +150,8 @@ def main():
         settings = yaml.safe_load(file)
 
     # train_data = PhysionetDataset('train', settings, True)
-    train_data = NormalizedPhysionetDataset('train', settings, True)
+    train_data = DeepSleepDataset('train', settings, True)
+    # train_data = NormalizedPhysionetDataset('train', settings, True)
     batch_size = 1  # settings['train_batch_size']
     train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=False)
 
@@ -137,7 +168,8 @@ def main():
         starting = 0  # 100_000
         ending = input_signals.shape[0] # 4_000_000
 
-        plot_signal_segment(input_signals, output_signals, arousal_signals, starting, ending)
+        plot_signal_segment(input_signals, output_signals, arousal_signals, None, starting, ending)
+        # plot_signal_segment(input_signals, output_signals, None, None, starting, ending)
 
         exit()
 
