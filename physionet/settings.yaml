@@ -9,10 +9,11 @@ model_name: "/out/best_model.pt"
 # training params
 device: cuda
 epochs: 200
-train_batch_size: 1
+train_batch_size: 2
 test_batch_size: 1
-pos_weight: 10.0
-max_lr: 1e-3
+pos_weight: 2.0
+max_lr: 1e-4
+weight_decay: 1e-5
 warmstart_percentage: 0.05
 num_workers: 8
 # ------------
@@ -1026,6 +1027,6 @@ test:
 
 
 # testing only locally.
-split: train
+split: validation
 idx: 0
 # ------------

@@ -19,7 +19,7 @@ def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
     epoch_start = time.time()
 
     for batch_idx, _data in enumerate(dataloader):
-        inputs, labels, _ = _data  # TODO: add num_samples
+        inputs, labels = _data  # TODO: add num_samples
         inputs = inputs.to(settings['device'])
         labels = labels.to(settings['device'])
 
@@ -32,14 +32,18 @@ def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
 
         loss.backward()
         optimizer.step()
-        scheduler.step()
+        if scheduler is not None:
+            scheduler.step()
         batch_end = time.time()
 
         train_loss += loss
         current_params['total_steps'] += 1
 
         writer.add_scalar('train/batch_time', batch_end - batch_start, current_params['total_steps'])
-        writer.add_scalar('train/lr', scheduler.get_last_lr()[0], current_params['total_steps'])
+        if scheduler is not None:
+            writer.add_scalar('train/lr', scheduler.get_last_lr()[0], current_params['total_steps'])
+        else:
+            writer.add_scalar('train/lr', float(settings['max_lr']), current_params['total_steps'])
 
     epoch_end = time.time()
     writer.add_scalar('train/epoch_time', epoch_end - epoch_start, current_params['epoch'])
@@ -107,14 +111,15 @@ def train_loop(model, train_dataloader, validation_dataloader, settings):
     criterion = nn.BCEWithLogitsLoss(
         pos_weight=torch.tensor([settings['pos_weight']])).to(
             settings['device'])
-    optimizer = optim.AdamW(model.parameters())
-    scheduler = optim.lr_scheduler.OneCycleLR(
-        optimizer,
-        max_lr=float(settings['max_lr']),
-        pct_start=settings['warmstart_percentage'],
-        steps_per_epoch=int(len(train_dataloader)),
-        epochs=settings['epochs'],
-        anneal_strategy='linear')
+    optimizer = optim.AdamW(model.parameters(), lr=float(settings['max_lr']), weight_decay=float(settings['weight_decay']))
+    # scheduler = optim.lr_scheduler.OneCycleLR(
+    #     optimizer,
+    #     max_lr=float(settings['max_lr']),
+    #     pct_start=settings['warmstart_percentage'],
+    #     steps_per_epoch=int(len(train_dataloader)),
+    #     epochs=settings['epochs'],
+    #     anneal_strategy='linear')
+    scheduler = None
 
     current_params = {
         'total_steps': 0,

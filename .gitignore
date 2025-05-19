@@ -20,5 +20,7 @@ graph/*
 *.profile
 *.pt
 physionet/tensorboard/*
+scripts/*/*
+scripts/*.zip
 
 Physionet_PointFiveFour/

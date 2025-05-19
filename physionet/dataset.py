@@ -74,8 +74,8 @@ class NormalizedPhysionetDataset(PhysionetDataset):
 
         # Apply min-max normalization per channel
         # ['F3-M2', 'F4-M1', 'C3-M2', 'C4-M1', 'O1-M2', 'O2-M1', 'E1-M2', 'Chin1-Chin2', 'ABD', 'CHEST', 'AIRFLOW', 'SaO2', 'ECG']
-        min_vals = [-200, -200, -200, -200, -200, -200, -200, -200, -500, -400, -200, 25000, -1200]
-        max_vals = [ 200,  200,  200,  200,  200,  200,  200,  200,  500,  400,  200, 35000,  1200]
+        min_vals = [-400, -400, -400, -400, -400, -400, -400, -400, -1000, -400, -400, 25000, -1800]
+        max_vals = [ 400,  400,  400,  400,  400,  400,  400,  400,  1000,  400,  400, 35000,  1800]
         input_signals = np.clip(input_signals, min_vals, max_vals)
         # input_signals = self.normalize_columns(input_signals, min_vals, max_vals)
 
@@ -119,7 +119,7 @@ class DeepSleepDataset(PhysionetDataset):
         return arousal_signals
 
     def combine_outputs(self, output_signal, arousal_signals):
-        output_signal = arousal_signals['rera']
+        # output_signal = arousal_signals['rera']
         total_length = 8_388_608  # 2**23
         signal_length = output_signal.shape[0]
         pad_length = total_length - signal_length
