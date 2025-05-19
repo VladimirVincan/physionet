@@ -76,10 +76,6 @@ def validate(model, dataloader, criterion, settings, current_params,
 
             outputs = outputs[:, :num_samples]
             labels = labels[:, :num_samples]
-            # print(outputs.shape)
-            # print(labels.shape)
-            # outputs = np.squeeze(outputs, axis=2)
-            # labels = np.squeeze(labels, axis=2)
 
             for i, (output, label) in enumerate(zip(outputs, labels)):
                 record_name = str(batch_idx) + ' ' + str(i)
@@ -111,7 +107,7 @@ def train_loop(model, train_dataloader, validation_dataloader, settings):
     criterion = nn.BCEWithLogitsLoss(
         pos_weight=torch.tensor([settings['pos_weight']])).to(
             settings['device'])
-    optimizer = optim.AdamW(model.parameters(), lr=float(settings['max_lr']), weight_decay=float(settings['weight_decay']))
+    optimizer = optim.AdamW(model.parameters(), lr=float(settings['max_lr']), weight_decay=float(settings['weight_decay']), betas=(settings['beta_1'], settings['beta_2']))
     # scheduler = optim.lr_scheduler.OneCycleLR(
     #     optimizer,
     #     max_lr=float(settings['max_lr']),

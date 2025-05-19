@@ -11,7 +11,7 @@ from dataset import (DeepSleepDataset, NormalizedPhysionetDataset,
                      PhysionetDataset)
 from DeepSleep import DeepSleep
 from dummy_model import DummyModel
-from ssm import StateSpaceModel
+# from ssm import StateSpaceModel
 from train import train_loop
 
 

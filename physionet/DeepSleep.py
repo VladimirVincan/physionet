@@ -8,11 +8,11 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.block = nn.Sequential(
             nn.Conv1d(in_channels, out_channels, kernel_size, padding='same'),
-            nn.BatchNorm1d(out_channels),
             nn.ReLU(inplace=True),
-            nn.Conv1d(out_channels, out_channels, kernel_size, padding='same'),
             nn.BatchNorm1d(out_channels),
-            nn.ReLU(inplace=True)
+            nn.Conv1d(out_channels, out_channels, kernel_size, padding='same'),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm1d(out_channels),
         )
 
     def forward(self, x):

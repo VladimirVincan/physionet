@@ -13,13 +13,11 @@ train_batch_size: 1
 test_batch_size: 1
 pos_weight: 10.0
 max_lr: 4e-3
+weight_decay: 1e-5
+beta_1: 0.9
+beta_2: 0.999
 warmstart_percentage: 0.05
 num_workers: 4
-# ------------
-
-
-# testing params
-test_csv_name: "outputs.csv"
 # ------------
 
 
@@ -156,3 +154,8 @@ arousals_to_visualise:
   # - "nrem3"
   # - "rem"
 # ------------
+
+# testing params
+test_csv_name: "outputs.csv"
+# ------------
+
