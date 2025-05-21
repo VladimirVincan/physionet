@@ -131,7 +131,6 @@ class DeepSleepDataset(PhysionetDataset):
         input_signals = self.gaussian_normalization(input_signals)
         input_signals = self.randomize_magnitude(input_signals)
         input_signals = self.randomize_padding(input_signals)
-        input_signals = np.pad(input_signals, ((left_pad, right_pad), (0, 0)), mode='constant')
         input_signals = input_signals.astype(np.float32)
 
         return input_signals
