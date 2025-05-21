@@ -71,6 +71,9 @@ def validate(model, dataloader, criterion, settings, current_params,
             loss = criterion(outputs[mask], labels[mask])
             val_loss += loss
 
+            sigmoid = nn.Sigmoid()
+            outputs = sigmoid(outputs)  # use with BCEWithLogitsLoss
+
             outputs = outputs.cpu().detach().numpy()
             labels = labels.cpu().detach().numpy()
 
@@ -107,6 +110,7 @@ def train_loop(model, train_dataloader, validation_dataloader, settings):
     criterion = nn.BCEWithLogitsLoss(
         pos_weight=torch.tensor([settings['pos_weight']])).to(
             settings['device'])
+    # criterion = nn.BCELoss().to(settings['device'])
     optimizer = optim.AdamW(model.parameters(), lr=float(settings['max_lr']), weight_decay=float(settings['weight_decay']), betas=(settings['beta_1'], settings['beta_2']))
     # scheduler = optim.lr_scheduler.OneCycleLR(
     #     optimizer,

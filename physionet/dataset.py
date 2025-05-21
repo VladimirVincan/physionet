@@ -94,15 +94,32 @@ class DeepSleepDataset(PhysionetDataset):
         input_signals = (input_signals - (max_vals.T + min_vals.T)/2) / denom.T
         return input_signals
 
-    def preprocess_input_signals(self, input_signals):
+    def randomize_magnitude(self, input_signals):
+        if self.split == 'train':
+            factor = np.random.uniform(0.8, 1.2)
+        else:
+            return input_signals
+        return input_signals * factor
+
+    def randomize_padding(self, input_signals):
         total_length = 8_388_608  # 2**23
         signal_length = input_signals.shape[0]
         pad_length = total_length - signal_length
-        left_pad = pad_length // 2
+
+        if self.split == 'train':
+            left_pad = np.random.randint(0, pad_length + 1)
+        else:
+            left_pad = pad_length // 2
         right_pad = pad_length - left_pad
+        input_signals = np.pad(input_signals, ((left_pad, right_pad), (0, 0)), mode='constant')
+        self.left_pad = left_pad
+        return input_signals
+
+    def preprocess_input_signals(self, input_signals):
 
         input_signals = self.clip(input_signals)
-        input_signals = np.pad(input_signals, ((left_pad, right_pad), (0, 0)), mode='constant')
+        input_signals = self.randomize_magnitude(input_signals)
+        input_signals = self.randomize_padding(input_signals)
         input_signals = input_signals.astype(np.float32)
 
         return input_signals
@@ -118,15 +135,25 @@ class DeepSleepDataset(PhysionetDataset):
             arousal_signals[key] = np.pad(lst, ((left_pad, right_pad)), mode='constant')
         return arousal_signals
 
+    def smooth_labels(self, output_signals):
+        smoothing = float(self.settings['smoothing'])
+        return output_signals * (1.0 - smoothing) + (1 - output_signals) * smoothing
+
     def combine_outputs(self, output_signal, arousal_signals):
         # output_signal = arousal_signals['rera']
         total_length = 8_388_608  # 2**23
         signal_length = output_signal.shape[0]
+
         pad_length = total_length - signal_length
-        left_pad = pad_length // 2
+        # left_pad = pad_length // 2
+        left_pad = self.left_pad
         right_pad = pad_length - left_pad
 
-        output_signals = np.pad(output_signal, ((left_pad, right_pad)), mode='constant', constant_values=-1)
+        output_signals = output_signal
+        if self.split == 'train':
+            output_signals = self.smooth_labels(output_signals)
+        output_signals = np.pad(output_signals, ((left_pad, right_pad)), mode='constant', constant_values=-1)
+        output_signals = output_signals.astype(np.float32)
 
         return output_signals
 

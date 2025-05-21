@@ -8,11 +8,11 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.block = nn.Sequential(
             nn.Conv1d(in_channels, out_channels, kernel_size, padding='same'),
-            nn.ReLU(inplace=True),
             nn.BatchNorm1d(out_channels),
+            nn.ReLU(inplace=True),
             nn.Conv1d(out_channels, out_channels, kernel_size, padding='same'),
-            nn.ReLU(inplace=True),
             nn.BatchNorm1d(out_channels),
+            nn.ReLU(inplace=True),
         )
 
     def forward(self, x):
@@ -92,7 +92,9 @@ class DeepSleep(nn.Module):
         d1 = self.up1(d2)
         d1 = self.dec1(torch.cat([d1, e1], dim=1))
 
-        out = self.sigmoid(d1)
+        # if not self.train:
+        # out = self.sigmoid(d1)
+        out = d1
         out = out.squeeze(1)  # B x 1 x N -> B x N
 
         return out
