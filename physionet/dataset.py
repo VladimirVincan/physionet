@@ -44,7 +44,7 @@ class PhysionetDataset(Dataset):
         # input_signals = torch.Tensor(input_signals)
         return input_signals
 
-    def combine_outputs(self, arousal_signals):
+    def preprocess_arousal_signals(self, arousal_signals):
         return arousal_signals
 
     def combine_outputs(self, output_signal, arousal_signals):
@@ -191,6 +191,106 @@ class DeepSleepDataset(PhysionetDataset):
         return output_signals
 
 
+class SleepNetDataset(PhysionetDataset):
+    def init(self):
+        self.reduction_factor = 50
+        self.sample_data_limit = 7*3600*50
+
+    def pad(self, signals):
+        for n in range(len(signals)):
+            if signals.shape[0] < self.sample_data_limit:
+                # Zero Pad
+                needed_length = self.sample_data_limit - signals.shape[0]
+                extension = np.zeros(shape=(needed_length, signals.shape[1]))
+                extension[::, -3::] = -1.0
+                signals = np.concatenate([signals, extension], axis=0)
+
+            elif signals.shape[0] > self.sample_data_limit:
+                # Chop
+                signals = signals[0:self.sample_data_limit, ::]
+
+        return signals
+
+    def preprocess_input_signals(self, input_signals):
+        from scipy.signal import fftconvolve
+
+        input_signals = input_signals.astype(np.float64)
+        keep_channels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]  # remove ecg
+        filt_coeff = np.array([0.00637849379422531, 0.00543091599801427, -0.00255136650039784, -0.0123109503066702,
+                          -0.0137267267561505, -0.000943230632358082, 0.0191919895027550, 0.0287148886882440,
+                          0.0123598773891149, -0.0256928886371578, -0.0570987715759348, -0.0446385294777459,
+                          0.0303553522906817, 0.148402006671856, 0.257171285176269, 0.301282456398562,
+                          0.257171285176269, 0.148402006671856, 0.0303553522906817, -0.0446385294777459,
+                          -0.0570987715759348, -0.0256928886371578, 0.0123598773891149, 0.0287148886882440,
+                          0.0191919895027550, -0.000943230632358082, -0.0137267267561505, -0.0123109503066702,
+                          -0.00255136650039784, 0.00543091599801427, 0.00637849379422531])
+
+        for n in range(input_signals.shape[1]):
+            input_signals[::, n] = np.convolve(input_signals[::, n], filt_coeff, mode='same')
+        input_signals = input_signals[0::4, keep_channels]
+
+        input_signals[::, 11] += -32768.0
+        input_signals[::, 11] /= 65535.0
+        input_signals[::, 11] -= 0.5
+
+        kernel_size = (50*18*60)+1
+
+        center = np.mean(input_signals, axis=0)
+        scale = np.std(input_signals, axis=0)
+        scale[scale == 0] = 1.0
+        input_signals = (input_signals - center) / scale
+
+        center = np.zeros(input_signals.shape)
+        for n in range(input_signals.shape[1]):
+            center[::, n] = fftconvolve(input_signals[::, n], np.ones(shape=(kernel_size,))/kernel_size, mode='same')
+
+        # Exclude SAO2
+        center[::, 11] = 0.0
+        center[np.isnan(center) | np.isinf(center)] = 0.0
+        input_signals = input_signals - center
+
+        # Compute and remove the rms with FFT convolution of squared signal
+        scale = np.ones(input_signals.shape)
+        for n in range(input_signals.shape[1]):
+            temp = fftconvolve(np.square(input_signals[::, n]), np.ones(shape=(kernel_size,))/kernel_size, mode='same')
+
+            # Deal with negative values (mathematically, it should never be negative, but fft artifacts can cause this)
+            temp[temp < 0] = 0.0
+
+            # Deal with invalid values
+            invalidIndices = np.isnan(temp) | np.isinf(temp)
+            temp[invalidIndices] = 0.0
+            maxTemp = np.max(temp)
+            temp[invalidIndices] = maxTemp
+
+            # Finish rms calculation
+            scale[::, n] = np.sqrt(temp)
+
+        # Exclude SAO2
+        scale[::, 11] = 1.0
+
+        scale[(scale == 0) | np.isinf(scale) | np.isnan(scale)] = 1.0  # To correct for record 12 that has a zero amplitude chest signal
+        input_signals = input_signals / scale
+
+        input_signals = input_signals.astype(np.float32)
+
+        # Enforce dataLimitInHours hour length with chopping / zero padding for memory usage stability and effficiency in cuDNN
+        self.pad(input_signals)
+
+        return input_signals
+
+    def preprocess_arousal_signals(self, arousal_signals):
+        total_length = 8_388_608  # 2**23
+
+        for key, lst in arousal_signals.items():
+            signal_length = len(lst)
+            pad_length = total_length - signal_length
+            left_pad = pad_length // 2
+            right_pad = pad_length - left_pad
+            arousal_signals[key] = np.pad(lst, ((left_pad, right_pad)), mode='constant')
+        return arousal_signals
+
+
 def main():
     import sys
 
@@ -210,7 +310,8 @@ def main():
         settings = yaml.safe_load(file)
 
     # train_data = PhysionetDataset('train', settings, True)
-    train_data = DeepSleepDataset('train', settings, True)
+    # train_data = DeepSleepDataset('train', settings, True)
+    train_data = SleepNetDataset('train', settings, True)
     # train_data = NormalizedPhysionetDataset('train', settings, True)
     batch_size = 1  # settings['train_batch_size']
     train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=False)
