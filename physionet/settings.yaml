@@ -3,6 +3,7 @@ folder_dir: /data/physionet/challenge-2018/training
 output_path: /out
 summary_writer: "/out/tensorboard"
 model_name: "/out/best_model.pt"
+ref555_file_path: ../ref555.npy
 # ------------
 
 
