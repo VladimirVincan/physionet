@@ -3,6 +3,7 @@ folder_dir: ../challenge-2018/training
 output_path: out
 summary_writer: "tensorboard"
 model_name: "best_model.pt"
+ref555_file_path: ../ref555.npy
 # ------------
 
 

@@ -12,6 +12,10 @@ class PhysionetDataset(Dataset):
         self.split = split
         self.settings = settings
         self.return_arousal_signals = return_arousal_signals
+        self.init()
+
+    def init(self):
+        pass
 
     def __len__(self):
         return len(self.settings[self.split])
@@ -84,6 +88,9 @@ class NormalizedPhysionetDataset(PhysionetDataset):
         # return torch.tensor(input_signals)
 
 class DeepSleepDataset(PhysionetDataset):
+    def init(self):
+        self.ref555 = None
+
     def clip(self, input_signals):
         min_vals = [-200, -200, -200, -200, -200, -200, -200, -200, -500, -400, -200, 25000, -1200]
         max_vals = [ 200,  200,  200,  200,  200,  200,  200,  200,  500,  400,  200, 35000,  1200]
@@ -125,10 +132,25 @@ class DeepSleepDataset(PhysionetDataset):
         input_signals = (input_signals - mean) / std
         return input_signals
 
+    def quantile_normalization(self, input_signals):
+        if self.ref555 is None:
+            self.ref555=np.load(self.settings['ref555_file_path']).T
+
+        d0 = input_signals.shape[1]
+        s1 = float(self.ref555.shape[0]) # size in
+        s2 = float(input_signals.shape[0]) # size out
+        input_signals_new = input_signals.copy()
+
+        for i in range(d0):
+            tmp = np.interp(np.arange(s2)/(s2-1)*(s1-1), np.arange(s1), self.ref555[:, i])
+            input_signals_new[np.argsort(input_signals[:, i]), i] = tmp
+        return input_signals_new
+
     def preprocess_input_signals(self, input_signals):
 
         # input_signals = self.clip(input_signals)
-        input_signals = self.gaussian_normalization(input_signals)
+        self.quantile_normalization(input_signals)
+        # input_signals = self.gaussian_normalization(input_signals)
         input_signals = self.randomize_magnitude(input_signals)
         input_signals = self.randomize_padding(input_signals)
         input_signals = input_signals.astype(np.float32)
