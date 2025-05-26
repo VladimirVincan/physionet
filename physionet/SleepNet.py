@@ -193,9 +193,6 @@ class Sleep_model_MultiTarget(nn.Module):
 
     def forward(self, x):
         x = x.permute(0, 2, 1)
-        print('----------------')
-        print(x.shape)
-        x = x.detach().contiguous()
 
         # Downsampling to 1 entity per second
         x = self.dsMod1(x)
@@ -220,13 +217,15 @@ class Sleep_model_MultiTarget(nn.Module):
 
         # Bidirectional skip LSTM and convert joint predictions to marginal predictions
         x = self.skipLSTM(x)
-        print(x.shape)
         x1, x2, x3 = marginalize(x)
-        print(x1.shape)
 
         if not(self.training):
             x1 = torch.exp(x1)
             x2 = torch.exp(x2)
             x3 = torch.exp(x3)
+
+            x1 = torch.nn.functional.upsample(x1, scale_factor=200, mode='linear')
+            x2 = torch.nn.functional.upsample(x2, scale_factor=200, mode='linear')
+            x3 = torch.nn.functional.upsample(x3, scale_factor=200, mode='linear')
 
         return (x1, x2, x3)

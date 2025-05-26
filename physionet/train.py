@@ -20,27 +20,13 @@ def sleep_net_loss(predictions, truths, settings):
     arousal_outputs, apnea_hypopnea_outputs, sleep_stage_outputs = predictions
     batch_arousal_targs, batch_apnea_targs, batch_wake_targs = truths
 
-    print(arousal_outputs)
-    print(apnea_hypopnea_outputs)
-    print(arousal_outputs.shape)
-    print(batch_arousal_targs.shape)
-    print(apnea_hypopnea_outputs.shape)
-    print(batch_apnea_targs.shape)
-    print(sleep_stage_outputs.shape)
-    print(batch_wake_targs.shape)
+    batch_arousal_targs = batch_arousal_targs.view(-1)
+    batch_apnea_targs = batch_apnea_targs.view(-1)
+    batch_wake_targs = batch_wake_targs.view(-1)
 
     arousal_outputs = arousal_outputs.permute(0, 2, 1).contiguous().view(-1, 2)
     apnea_hypopnea_outputs = apnea_hypopnea_outputs.permute(0, 2, 1).contiguous().view(-1, 2)
     sleep_stage_outputs = sleep_stage_outputs.permute(0, 2, 1).contiguous().view(-1, 2)
-
-    print(arousal_outputs)
-    print(apnea_hypopnea_outputs)
-    print(arousal_outputs.shape)
-    print(batch_arousal_targs.shape)
-    print(apnea_hypopnea_outputs.shape)
-    print(batch_apnea_targs.shape)
-    print(sleep_stage_outputs.shape)
-    print(batch_wake_targs.shape)
 
     arousal_loss = arousal_criterion(arousal_outputs, batch_arousal_targs)
     apnea_hypopnea_loss = apnea_criterion(apnea_hypopnea_outputs, batch_apnea_targs)
@@ -88,6 +74,10 @@ def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
         else:
             writer.add_scalar('train/lr', float(settings['max_lr']), current_params['total_steps'])
 
+        if model.name == 'SleepNet':
+            if batch_idx == 100:
+                break
+
     epoch_end = time.time()
     writer.add_scalar('train/epoch_time', epoch_end - epoch_start, current_params['epoch'])
     writer.add_scalar('train/loss', train_loss / len(dataloader), current_params['epoch'])
@@ -114,7 +104,9 @@ def validate(model, dataloader, criterion, settings, current_params,
             if model.name == 'SleepNet':
                 loss = criterion(outputs, labels, settings)
                 labels = labels[0]
-                outputs = outputs[0]
+                print(labels.shape)
+                outputs = outputs[0][:, 1]
+                print(outputs.shape)
             else:
                 mask = create_mask(labels)
                 loss = criterion(outputs[mask], labels[mask])

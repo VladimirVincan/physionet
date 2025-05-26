@@ -10,10 +10,10 @@ ref555_file_path: ../ref555.npy
 # training params
 device: cuda
 epochs: 200
-train_batch_size: 2
+train_batch_size: 1
 test_batch_size: 1
 pos_weight: 10.0
-max_lr: 1e-4
+max_lr: 1e-3
 weight_decay: 1e-5
 beta_1: 0.9
 beta_2: 0.999

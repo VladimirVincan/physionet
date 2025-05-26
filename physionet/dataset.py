@@ -286,7 +286,8 @@ class SleepNetDataset(PhysionetDataset):
         input_signals = input_signals / scale
 
         # Enforce dataLimitInHours hour length with chopping / zero padding for memory usage stability and effficiency in cuDNN
-        input_signals = self.pad(input_signals)
+        if self.split == 'train':
+            input_signals = self.pad(input_signals)
 
         input_signals = input_signals.astype(np.float32)
 
@@ -314,11 +315,6 @@ class SleepNetDataset(PhysionetDataset):
         sleep_stage_annotations[(arousal_annotations < -0.5).astype(bool) & ~(apnea_hypopnea_annotations.astype(bool)) & sleep_stage_annotations.astype(bool)] = 0.
         sleep_stage_annotations[(arousal_annotations < -0.5).astype(bool) & apnea_hypopnea_annotations.astype(bool) & ~(sleep_stage_annotations.astype(bool))] = 1.
 
-        # bool -> np.float32
-        arousal_annotations = arousal_annotations.astype(np.float32)
-        apnea_hypopnea_annotations = apnea_hypopnea_annotations.astype(np.float32)
-        sleep_stage_annotations = sleep_stage_annotations.astype(np.float32)
-
         if self.split == 'train':
             # 200 Hz -> 50 Hz
             arousal_annotations = arousal_annotations[0::4]
@@ -333,6 +329,11 @@ class SleepNetDataset(PhysionetDataset):
             arousal_annotations = arousal_annotations[0::self.reduction_factor]
             apnea_hypopnea_annotations = apnea_hypopnea_annotations[0::self.reduction_factor]
             sleep_stage_annotations = sleep_stage_annotations[0::self.reduction_factor]
+
+        # bool -> long
+        arousal_annotations = arousal_annotations.astype(np.long).reshape(-1)
+        apnea_hypopnea_annotations = apnea_hypopnea_annotations.astype(np.long).reshape(-1)
+        sleep_stage_annotations = sleep_stage_annotations.astype(np.long).reshape(-1)
 
         output_signals = (arousal_annotations, apnea_hypopnea_annotations, sleep_stage_annotations)
 
