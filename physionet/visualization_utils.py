@@ -96,14 +96,15 @@ def plot_signal_segment(input_signal: np.ndarray, arousals: np.ndarray = None, a
     if not (0 <= start_idx < end_idx <= input_signal.shape[0]):
         raise ValueError("Invalid start or end index")
 
-    if arousals is not None and arousals.shape[0] != input_signal.shape[0]:
-        raise ValueError("Output input_signal must have the same length as input signal")
+    # if arousals is not None and arousals.shape[0] != input_signal.shape[0]:
+    #     raise ValueError("Output input_signal must have the same length as input signal")
 
     y_labels = ['F3-M2', 'F4-M1', 'C3-M2', 'C4-M1', 'O1-M2', 'O2-M1', 'E1-M2', 'Chin', 'ABD', 'Chest', 'Airflow', 'SaO2', 'ECG']
 
-    for key, value in arousals_dict.items():
-        input_signal = np.concatenate((value[:, np.newaxis], input_signal), axis=1)
-        y_labels = [key] + y_labels
+    if arousals_dict is not None:
+        for key, value in arousals_dict.items():
+            input_signal = np.concatenate((value[:, np.newaxis], input_signal), axis=1)
+            y_labels = [key] + y_labels
 
     if prediction is not None:
         # pred shape: (1, N) -> pret.T shape: (N, 1)
@@ -111,8 +112,14 @@ def plot_signal_segment(input_signal: np.ndarray, arousals: np.ndarray = None, a
         y_labels = ['pred'] + y_labels
 
     if arousals is not None:
-        input_signal = np.concatenate((arousals[:, np.newaxis], input_signal), axis=1)
-        y_labels = ['arousal'] + y_labels
+        try:
+            input_signal = np.concatenate((arousals[:, np.newaxis], input_signal), axis=1)
+            y_labels = ['arousal'] + y_labels
+        except:  # SleepNetDataset
+            arousal_annotations, apnea_hypopnea_annotations, sleep_stage_annotations = arousals
+            arousals = np.concatenate([arousal_annotations.T, apnea_hypopnea_annotations.T, sleep_stage_annotations.T], axis=1)
+            input_signal = np.concatenate((arousals, input_signal), axis=1)
+            y_labels = ['arousal', 'apnea', 'sleep'] + y_labels
 
     segment = input_signal[start_idx:end_idx]
     num_channels = segment.shape[1]

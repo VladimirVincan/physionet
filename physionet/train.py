@@ -12,6 +12,45 @@ from score2018 import Challenge2018Score
 from utils import create_mask
 
 
+def sleep_net_loss(predictions, truths, settings):
+    arousal_criterion = torch.nn.CrossEntropyLoss(ignore_index=-1, reduce=True).to(settings['device'])
+    apnea_criterion = torch.nn.CrossEntropyLoss(ignore_index=-1, reduce=True).to(settings['device'])
+    wake_criterion = torch.nn.CrossEntropyLoss(ignore_index=-1, reduce=True).to(settings['device'])
+
+    arousal_outputs, apnea_hypopnea_outputs, sleep_stage_outputs = predictions
+    batch_arousal_targs, batch_apnea_targs, batch_wake_targs = truths
+
+    print(arousal_outputs)
+    print(apnea_hypopnea_outputs)
+    print(arousal_outputs.shape)
+    print(batch_arousal_targs.shape)
+    print(apnea_hypopnea_outputs.shape)
+    print(batch_apnea_targs.shape)
+    print(sleep_stage_outputs.shape)
+    print(batch_wake_targs.shape)
+
+    arousal_outputs = arousal_outputs.permute(0, 2, 1).contiguous().view(-1, 2)
+    apnea_hypopnea_outputs = apnea_hypopnea_outputs.permute(0, 2, 1).contiguous().view(-1, 2)
+    sleep_stage_outputs = sleep_stage_outputs.permute(0, 2, 1).contiguous().view(-1, 2)
+
+    print(arousal_outputs)
+    print(apnea_hypopnea_outputs)
+    print(arousal_outputs.shape)
+    print(batch_arousal_targs.shape)
+    print(apnea_hypopnea_outputs.shape)
+    print(batch_apnea_targs.shape)
+    print(sleep_stage_outputs.shape)
+    print(batch_wake_targs.shape)
+
+    arousal_loss = arousal_criterion(arousal_outputs, batch_arousal_targs)
+    apnea_hypopnea_loss = apnea_criterion(apnea_hypopnea_outputs, batch_apnea_targs)
+    sleep_stage_loss = wake_criterion(sleep_stage_outputs, batch_wake_targs)
+
+    loss = ((2*arousal_loss) + apnea_hypopnea_loss + sleep_stage_loss) / 4.0
+
+    return loss
+
+
 def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
                     settings, current_params, writer):
     model.train()
@@ -21,14 +60,18 @@ def train_one_epoch(model, dataloader, criterion, scheduler, optimizer,
     for batch_idx, _data in enumerate(dataloader):
         inputs, labels = _data  # TODO: add num_samples
         inputs = inputs.to(settings['device'])
-        labels = labels.to(settings['device'])
+        if model.name != 'SleepNet':
+            labels = labels.to(settings['device'])
 
         batch_start = time.time()
         optimizer.zero_grad()
         outputs = model(inputs)
 
-        mask = create_mask(labels)
-        loss = criterion(outputs[mask], labels[mask])
+        if model.name == 'SleepNet':
+            loss = criterion(outputs, labels, settings)
+        else:
+            mask = create_mask(labels)
+            loss = criterion(outputs[mask], labels[mask])
 
         loss.backward()
         optimizer.step()
@@ -62,17 +105,24 @@ def validate(model, dataloader, criterion, settings, current_params,
         for batch_idx, _data in enumerate(dataloader):
             inputs, labels, _, num_samples = _data
             inputs = inputs.to(settings['device'])
-            labels = labels.to(settings['device'])
+            if model.name != 'SleepNet':
+                labels = labels.to(settings['device'])
 
             start = time.time()
             outputs = model(inputs)
 
-            mask = create_mask(labels)
-            loss = criterion(outputs[mask], labels[mask])
+            if model.name == 'SleepNet':
+                loss = criterion(outputs, labels, settings)
+                labels = labels[0]
+                outputs = outputs[0]
+            else:
+                mask = create_mask(labels)
+                loss = criterion(outputs[mask], labels[mask])
             val_loss += loss
 
-            sigmoid = nn.Sigmoid()
-            outputs = sigmoid(outputs)  # use with BCEWithLogitsLoss
+            if criterion == nn.BCEWithLogitsLoss:
+                sigmoid = nn.Sigmoid()
+                outputs = sigmoid(outputs)  # use with BCEWithLogitsLoss
 
             outputs = outputs.cpu().detach().numpy()
             labels = labels.cpu().detach().numpy()
@@ -107,9 +157,10 @@ def validate(model, dataloader, criterion, settings, current_params,
 
 
 def train_loop(model, train_dataloader, validation_dataloader, settings):
-    criterion = nn.BCEWithLogitsLoss(
-        pos_weight=torch.tensor([settings['pos_weight']])).to(
-            settings['device'])
+    # criterion = nn.BCEWithLogitsLoss(
+    #     pos_weight=torch.tensor([settings['pos_weight']])).to(
+    #         settings['device'])
+    criterion = sleep_net_loss
     # criterion = nn.BCELoss().to(settings['device'])
     optimizer = optim.AdamW(model.parameters(), lr=float(settings['max_lr']), weight_decay=float(settings['weight_decay']), betas=(settings['beta_1'], settings['beta_2']))
     # scheduler = optim.lr_scheduler.OneCycleLR(

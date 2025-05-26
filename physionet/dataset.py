@@ -211,6 +211,19 @@ class SleepNetDataset(PhysionetDataset):
 
         return signals
 
+    def pad1(self, signals):
+        if len(signals) < self.sample_data_limit:
+            # Zero Pad
+            needed_length = self.sample_data_limit - len(signals)
+            extension = -np.ones(shape=(needed_length))
+            signals = np.concatenate([signals, extension], axis=0)
+
+        elif len(signals) > self.sample_data_limit:
+            # Chop
+            signals = signals[0:self.sample_data_limit]
+
+        return signals
+
     def preprocess_input_signals(self, input_signals):
         from scipy.signal import fftconvolve
 
@@ -272,23 +285,58 @@ class SleepNetDataset(PhysionetDataset):
         scale[(scale == 0) | np.isinf(scale) | np.isnan(scale)] = 1.0  # To correct for record 12 that has a zero amplitude chest signal
         input_signals = input_signals / scale
 
-        input_signals = input_signals.astype(np.float32)
-
         # Enforce dataLimitInHours hour length with chopping / zero padding for memory usage stability and effficiency in cuDNN
-        self.pad(input_signals)
+        input_signals = self.pad(input_signals)
+
+        input_signals = input_signals.astype(np.float32)
 
         return input_signals
 
-    def preprocess_arousal_signals(self, arousal_signals):
-        total_length = 8_388_608  # 2**23
+    def combine_outputs(self, output_signal, arousal_signals):
+        arousal_annotations = output_signal
+        apnea_hypopnea_annotations = np.zeros(shape=(len(output_signal)))
+        sleep_stage_annotations = np.full((len(output_signal)), -1.)
 
-        for key, lst in arousal_signals.items():
-            signal_length = len(lst)
-            pad_length = total_length - signal_length
-            left_pad = pad_length // 2
-            right_pad = pad_length - left_pad
-            arousal_signals[key] = np.pad(lst, ((left_pad, right_pad)), mode='constant')
-        return arousal_signals
+        apnea_hypopnea_annotations = (arousal_signals['obst'].astype(bool) | arousal_signals['cent'].astype(bool) | arousal_signals['mix'].astype(bool)).astype(float)
+        sleep_stage_annotations[arousal_signals['wake'].astype(bool)] = 0.
+        sleep_stage_annotations[arousal_signals['rem'].astype(bool)
+                                | arousal_signals['nrem1'].astype(bool)
+                                | arousal_signals['nrem2'].astype(bool)
+                                | arousal_signals['nrem3'].astype(bool)] = 1.
+
+        # correction according to Fig. 3:
+        sleep_stage_annotations[arousal_signals['rem'].astype(bool)
+                                | arousal_signals['nrem1'].astype(bool)
+                                | arousal_signals['nrem2'].astype(bool)
+                                | arousal_signals['nrem3'].astype(bool)] = 1.
+
+
+        sleep_stage_annotations[(arousal_annotations < -0.5).astype(bool) & ~(apnea_hypopnea_annotations.astype(bool)) & sleep_stage_annotations.astype(bool)] = 0.
+        sleep_stage_annotations[(arousal_annotations < -0.5).astype(bool) & apnea_hypopnea_annotations.astype(bool) & ~(sleep_stage_annotations.astype(bool))] = 1.
+
+        # bool -> np.float32
+        arousal_annotations = arousal_annotations.astype(np.float32)
+        apnea_hypopnea_annotations = apnea_hypopnea_annotations.astype(np.float32)
+        sleep_stage_annotations = sleep_stage_annotations.astype(np.float32)
+
+        if self.split == 'train':
+            # 200 Hz -> 50 Hz
+            arousal_annotations = arousal_annotations[0::4]
+            apnea_hypopnea_annotations = apnea_hypopnea_annotations[0::4]
+            sleep_stage_annotations = sleep_stage_annotations[0::4]
+
+            # pad
+            arousal_annotations = self.pad1(arousal_annotations)
+            apnea_hypopnea_annotations = self.pad1(apnea_hypopnea_annotations)
+            sleep_stage_annotations = self.pad1(sleep_stage_annotations)
+
+            arousal_annotations = arousal_annotations[0::self.reduction_factor]
+            apnea_hypopnea_annotations = apnea_hypopnea_annotations[0::self.reduction_factor]
+            sleep_stage_annotations = sleep_stage_annotations[0::self.reduction_factor]
+
+        output_signals = (arousal_annotations, apnea_hypopnea_annotations, sleep_stage_annotations)
+
+        return output_signals
 
 
 def main():
@@ -319,18 +367,24 @@ def main():
 
     for batch_idx, (input_signals, output_signals, arousal_signals) in enumerate(train_dataloader):
         input_signals = input_signals.squeeze(0)
-        output_signals = output_signals.squeeze(0)
+        try:
+            output_signals = output_signals.squeeze(0)
+        except:
+            pass
         arousal_signals = {k: v.squeeze(axis=0) for k, v in arousal_signals.items()}  # squeeze dict
 
         print('batch_idx: ' + str(batch_idx))
         print('input shape: ' + str(input_signals.shape))
-        print('output shape: ' + str(output_signals.shape))
+        try:
+            print('output shape: ' + str(output_signals.shape))
+        except:
+            print('output shape: ' + str(output_signals[0].shape))
 
         starting = 0  # 100_000
         ending = input_signals.shape[0] # 4_000_000
 
-        plot_signal_segment(input_signals, output_signals, arousal_signals, None, starting, ending)
-        # plot_signal_segment(input_signals, output_signals, None, None, starting, ending)
+        # plot_signal_segment(input_signals, output_signals, arousal_signals, None, starting, ending)
+        plot_signal_segment(input_signals, output_signals, None, None, starting, ending)
 
         exit()
 

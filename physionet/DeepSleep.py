@@ -22,6 +22,7 @@ class ConvBlock(nn.Module):
 class DeepSleep(nn.Module):
     def __init__(self, in_channels=13, out_channels=1):
         super().__init__()
+        self.name = 'DeepSleep'
         # Downsampling
         self.enc1 = ConvBlock(in_channels, 15)
         self.enc2 = ConvBlock(15, 18)

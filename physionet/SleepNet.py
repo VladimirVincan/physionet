@@ -6,7 +6,7 @@ import torch.nn.functional as Functional
 ########################################################################################################################
 # Functional blocks
 class Normalizer(nn.Module):
-    def __init__(self, numChannels, momentum=0.985, affine=True, channelNorm=True):
+    def __init__(self, numChannels, settings, momentum=0.985, affine=True, channelNorm=True):
         super(Normalizer, self).__init__()
 
         self.momentum = momentum
@@ -14,12 +14,12 @@ class Normalizer(nn.Module):
         self.affine = affine
         self.channelNorm = channelNorm
 
-        self.movingAverage = torch.zeros(1, numChannels, 1).cuda()
-        self.movingVariance = torch.ones(1, numChannels, 1).cuda()
+        self.movingAverage = torch.zeros(1, numChannels, 1).to(settings['device'])
+        self.movingVariance = torch.ones(1, numChannels, 1).to(settings['device'])
 
         if affine:
-            self.BatchNormScale = nn.Parameter(torch.ones(1, numChannels, 1)).cuda()
-            self.BatchNormBias = nn.Parameter(torch.zeros(1, numChannels, 1)).cuda()
+            self.BatchNormScale = nn.Parameter(torch.ones(1, numChannels, 1)).to(settings['device'])
+            self.BatchNormBias = nn.Parameter(torch.zeros(1, numChannels, 1)).to(settings['device'])
 
     def forward(self, x):
 
@@ -47,7 +47,7 @@ class Normalizer(nn.Module):
         return x
 
 class SeperableDenseNetUnit(nn.Module):
-    def __init__(self, in_channels, out_channels, kernelSize,
+    def __init__(self, in_channels, out_channels, kernelSize, settings,
                  groups=1, dilation=1, channelNorm=True):
         super(SeperableDenseNetUnit, self).__init__()
 
@@ -57,6 +57,7 @@ class SeperableDenseNetUnit(nn.Module):
         self.kernelSize = kernelSize
         self.groups = groups
         self.dilation = dilation
+        self.settings = settings
 
         # Convolutional transforms
         self.conv1 = nn.Conv1d(in_channels=in_channels, out_channels=in_channels, groups=in_channels, kernel_size=kernelSize,
@@ -65,7 +66,7 @@ class SeperableDenseNetUnit(nn.Module):
                                padding=0, dilation=1)
 
         self.conv3 = nn.Conv1d(in_channels=4*out_channels, out_channels=4*out_channels, groups=4*out_channels, kernel_size=kernelSize,
-                               padding=(kernelSize + ((kernelSize - 1) * (dilation - 1)) - 1) / 2, dilation=dilation)
+                               padding=(kernelSize + ((kernelSize - 1) * (dilation - 1)) - 1) // 2, dilation=dilation)
         self.conv4 = nn.Conv1d(in_channels=4*out_channels, out_channels=out_channels, groups=1, kernel_size=1,
                                padding=0, dilation=1)
 
@@ -74,8 +75,8 @@ class SeperableDenseNetUnit(nn.Module):
         self.conv3 = nn.utils.weight_norm(self.conv3, 'weight')
         self.conv4 = nn.utils.weight_norm(self.conv4, 'weight')
 
-        self.norm1 = Normalizer(numChannels=4 * out_channels, channelNorm=channelNorm)
-        self.norm2 = Normalizer(numChannels=out_channels, channelNorm=channelNorm)
+        self.norm1 = Normalizer(numChannels=4 * out_channels, settings=settings, channelNorm=channelNorm)
+        self.norm2 = Normalizer(numChannels=out_channels, settings=settings, channelNorm=channelNorm)
 
     def forward(self, x):
         # Apply first convolution block
@@ -95,16 +96,17 @@ class SeperableDenseNetUnit(nn.Module):
 # Define the Sleep model
 
 class SkipLSTM(nn.Module):
-    def __init__(self, in_channels, out_channels=4, hiddenSize=32):
+    def __init__(self, in_channels, settings, out_channels=4, hiddenSize=32):
         super(SkipLSTM, self).__init__()
 
         # Store parameters
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.settings = settings
 
         # Bidirectional LSTM to apply temporally across input channels
         self.rnn = nn.LSTM(input_size=in_channels, hidden_size=hiddenSize, num_layers=1, batch_first=True, dropout=0.0,
-                           bidirectional=True).cuda()
+                           bidirectional=True).to(settings['device'])
         self.rnn = nn.utils.weight_norm(self.rnn, name='weight_ih_l0')
         self.rnn = nn.utils.weight_norm(self.rnn, name='weight_hh_l0')
 
@@ -128,6 +130,7 @@ class SkipLSTM(nn.Module):
 
         return y
 
+
 def marginalize(x):
     p_joint = Functional.log_softmax(x, dim=1)
 
@@ -146,47 +149,52 @@ def marginalize(x):
     return x1, x2, x3
 
 class Sleep_model_MultiTarget(nn.Module):
-    def __init__(self, numSignals=12):
+    def __init__(self, settings, numSignals=12):
         super(Sleep_model_MultiTarget, self).__init__()
+        self.name = 'SleepNet'
+        self.settings = settings
         self.channelMultiplier = 2
         self.kernelSize = 25
         self.numSignals = numSignals
 
         # Set up downsampling densenet blocks
         self.dsMod1 = SeperableDenseNetUnit(in_channels=self.numSignals, out_channels=self.channelMultiplier*self.numSignals,
-                                kernelSize=(2*self.kernelSize)+1, groups=1, dilation=1, channelNorm=False)
+                                            kernelSize=(2*self.kernelSize)+1, settings=settings, groups=1, dilation=1, channelNorm=False)
         self.dsMod2 = SeperableDenseNetUnit(in_channels=(self.channelMultiplier+1)*self.numSignals, out_channels=self.channelMultiplier*self.numSignals,
-                                 kernelSize=(2*self.kernelSize)+1, groups=1, dilation=1, channelNorm=False)
+                                 kernelSize=(2*self.kernelSize)+1, settings=settings, groups=1, dilation=1, channelNorm=False)
         self.dsMod3 = SeperableDenseNetUnit(in_channels=((2*self.channelMultiplier)+1)*self.numSignals, out_channels=self.channelMultiplier*self.numSignals,
-                                 kernelSize=(2*self.kernelSize)+1, groups=1, dilation=1, channelNorm=False)
+                                 kernelSize=(2*self.kernelSize)+1, settings=settings, groups=1, dilation=1, channelNorm=False)
 
         # Set up densenet modules
         self.denseMod1 = SeperableDenseNetUnit(in_channels=((3 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                 kernelSize=self.kernelSize, groups=1, dilation=1, channelNorm=True)
+                                 kernelSize=self.kernelSize, settings=settings, groups=1, dilation=1, channelNorm=True)
         self.denseMod2 = SeperableDenseNetUnit(in_channels=((4 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                 kernelSize=self.kernelSize, groups=1, dilation=2, channelNorm=True)
+                                 kernelSize=self.kernelSize, settings=settings, groups=1, dilation=2, channelNorm=True)
         self.denseMod3 = SeperableDenseNetUnit(in_channels=((5 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                 kernelSize=self.kernelSize, groups=1, dilation=4, channelNorm=True)
+                                 kernelSize=self.kernelSize, settings=settings, groups=1, dilation=4, channelNorm=True)
         self.denseMod4 = SeperableDenseNetUnit(in_channels=((6 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                 kernelSize=self.kernelSize, groups=1, dilation=8, channelNorm=True)
+                                 kernelSize=self.kernelSize, settings=settings, groups=1, dilation=8, channelNorm=True)
         self.denseMod5 = SeperableDenseNetUnit(in_channels=((7 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                 kernelSize=self.kernelSize, groups=1, dilation=16, channelNorm=True)
+                                 kernelSize=self.kernelSize, settings=settings, groups=1, dilation=16, channelNorm=True)
         self.denseMod6 = SeperableDenseNetUnit(in_channels=((8 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                 kernelSize=self.kernelSize, groups=1, dilation=32, channelNorm=True)
+                                 kernelSize=self.kernelSize, settings=settings, groups=1, dilation=32, channelNorm=True)
         self.denseMod7 = SeperableDenseNetUnit(in_channels=((9 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                 kernelSize=self.kernelSize, groups=1, dilation=16, channelNorm=True)
+                                 kernelSize=self.kernelSize, settings=settings, groups=1, dilation=16, channelNorm=True)
         self.denseMod8 = SeperableDenseNetUnit(in_channels=((10 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                  kernelSize=self.kernelSize, groups=1, dilation=8, channelNorm=True)
+                                  kernelSize=self.kernelSize, settings=settings, groups=1, dilation=8, channelNorm=True)
         self.denseMod9 = SeperableDenseNetUnit(in_channels=((11 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                  kernelSize=self.kernelSize, groups=1, dilation=4, channelNorm=True)
+                                  kernelSize=self.kernelSize, settings=settings, groups=1, dilation=4, channelNorm=True)
         self.denseMod10 = SeperableDenseNetUnit(in_channels=((12 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                  kernelSize=self.kernelSize, groups=1, dilation=2, channelNorm=True)
+                                  kernelSize=self.kernelSize, settings=settings, groups=1, dilation=2, channelNorm=True)
         self.denseMod11 = SeperableDenseNetUnit(in_channels=((13 * self.channelMultiplier) + 1) * self.numSignals, out_channels=self.channelMultiplier * self.numSignals,
-                                  kernelSize=self.kernelSize, groups=1, dilation=1, channelNorm=True)
+                                  kernelSize=self.kernelSize, settings=settings, groups=1, dilation=1, channelNorm=True)
 
-        self.skipLSTM = SkipLSTM(((14*self.channelMultiplier)+1)*self.numSignals, hiddenSize=self.channelMultiplier*64, out_channels=4)
+        self.skipLSTM = SkipLSTM(((14*self.channelMultiplier)+1)*self.numSignals, settings=settings, hiddenSize=self.channelMultiplier*64, out_channels=4)
 
     def forward(self, x):
+        x = x.permute(0, 2, 1)
+        print('----------------')
+        print(x.shape)
         x = x.detach().contiguous()
 
         # Downsampling to 1 entity per second
@@ -212,7 +220,9 @@ class Sleep_model_MultiTarget(nn.Module):
 
         # Bidirectional skip LSTM and convert joint predictions to marginal predictions
         x = self.skipLSTM(x)
+        print(x.shape)
         x1, x2, x3 = marginalize(x)
+        print(x1.shape)
 
         if not(self.training):
             x1 = torch.exp(x1)
