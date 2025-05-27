@@ -104,9 +104,7 @@ def validate(model, dataloader, criterion, settings, current_params,
             if model.name == 'SleepNet':
                 loss = criterion(outputs, labels, settings)
                 labels = labels[0]
-                print(labels.shape)
                 outputs = outputs[0][:, 1]
-                print(outputs.shape)
             else:
                 mask = create_mask(labels)
                 loss = criterion(outputs[mask], labels[mask])
