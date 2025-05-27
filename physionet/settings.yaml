@@ -26,7 +26,8 @@ smoothing: 1e-1
 # other
 num_channels: 12
 reduction_factor: 50
-summary_shape: "(1, 1048576, 13)"
+summary_shape: "(1, 1_260_000, 12)"
+# summary_shape: "(1, 1048576, 13)"
 # ------------
 
 

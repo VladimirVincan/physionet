@@ -20,9 +20,9 @@ def sleep_net_loss(predictions, truths, settings):
     arousal_outputs, apnea_hypopnea_outputs, sleep_stage_outputs = predictions
     batch_arousal_targs, batch_apnea_targs, batch_wake_targs = truths
 
-    batch_arousal_targs = batch_arousal_targs.view(-1)
-    batch_apnea_targs = batch_apnea_targs.view(-1)
-    batch_wake_targs = batch_wake_targs.view(-1)
+    batch_arousal_targs = batch_arousal_targs.view(-1).to(settings['device'])
+    batch_apnea_targs = batch_apnea_targs.view(-1).to(settings['device'])
+    batch_wake_targs = batch_wake_targs.view(-1).to(settings['device'])
 
     arousal_outputs = arousal_outputs.permute(0, 2, 1).contiguous().view(-1, 2)
     apnea_hypopnea_outputs = apnea_hypopnea_outputs.permute(0, 2, 1).contiguous().view(-1, 2)
