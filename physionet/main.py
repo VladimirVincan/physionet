@@ -11,6 +11,7 @@ from dataset import (DeepSleepDataset, NormalizedPhysionetDataset,
                      PhysionetDataset, SleepNetDataset)
 from DeepSleep import DeepSleep
 from dummy_model import DummyModel
+from MambaSleepNet import MambaSleepNet
 from SleepNet import Sleep_model_MultiTarget
 # from ssm import StateSpaceModel
 from train import train_loop
@@ -45,7 +46,8 @@ def main():
     # model = StateSpaceModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
     # model = DummyModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
     # model = DeepSleep()
-    model = Sleep_model_MultiTarget(settings)
+    # model = Sleep_model_MultiTarget(settings)
+    model = MambaSleepNet(settings)
     model.to(settings['device'])
 
     summary(model,
