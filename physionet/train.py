@@ -110,7 +110,7 @@ def validate(model, dataloader, criterion, settings, current_params,
                 loss = criterion(outputs[mask], labels[mask])
             val_loss += loss
 
-            if criterion == nn.BCEWithLogitsLoss:
+            if isinstance(criterion, nn.BCEWithLogitsLoss):
                 sigmoid = nn.Sigmoid()
                 outputs = sigmoid(outputs)  # use with BCEWithLogitsLoss
 

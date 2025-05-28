@@ -36,7 +36,7 @@ def main():
     # model = DeepSleep()
     # model = Sleep_model_MultiTarget(settings)
     # model = MambaSleepNet(settings)
-    model = MambaSleepNet(settings)
+    model = MambaDeepSleep()
     model.to(settings['device'])
 
     # train_data = NormalizedPhysionetDataset('train', settings)

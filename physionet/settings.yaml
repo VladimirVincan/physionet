@@ -3,7 +3,7 @@ folder_dir: /data/physionet/challenge-2018/training
 output_path: /out
 summary_writer: "/out/tensorboard"
 model_name: "/out/best_model.pt"
-ref555_file_path: ../ref555.npy
+ref555_file_path: /data/physionet/ref555.npy
 # ------------
 
 
@@ -13,7 +13,7 @@ epochs: 200
 train_batch_size: 1
 test_batch_size: 1
 pos_weight: 10.0
-max_lr: 1e-3
+max_lr: 1e-4
 weight_decay: 1e-5
 beta_1: 0.9
 beta_2: 0.999
@@ -26,8 +26,8 @@ smoothing: 1e-1
 # other
 num_channels: 12
 reduction_factor: 50
-summary_shape: "(1, 1_260_000, 12)"
-# summary_shape: "(1, 1048576, 13)"
+# summary_shape: "(1, 1_260_000, 12)"
+summary_shape: "(1, 1048576, 13)"
 # ------------
 
 

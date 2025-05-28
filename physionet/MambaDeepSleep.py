@@ -44,4 +44,4 @@ class MambaDeepSleep(DeepSleep):
     def __init__(self, in_channels=13, out_channels=1):
         super().__init__(in_channels, out_channels)
         self.bottleneck = MambaBottleneck(240, 480)
-        self.up8 = nn.ConvTranspose1d(920, 240, kernel_size=4, stride=4)
+        self.up8 = nn.ConvTranspose1d(960, 240, kernel_size=4, stride=4)
