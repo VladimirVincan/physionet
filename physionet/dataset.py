@@ -103,7 +103,7 @@ class DeepSleepDataset(PhysionetDataset):
 
     def randomize_magnitude(self, input_signals):
         if self.split == 'train':
-            factor = np.random.uniform(0.8, 1.2)
+            factor = np.random.uniform(0.8, 1.25)  # alternative: 0.90 and 1.15
         else:
             return input_signals
         return input_signals * factor
@@ -113,7 +113,7 @@ class DeepSleepDataset(PhysionetDataset):
         signal_length = input_signals.shape[0]
         pad_length = total_length - signal_length
 
-        if self.split == 'train':
+        if self.split == 'train' and self.settings['randomize_padding']:
             left_pad = np.random.randint(0, pad_length + 1)
         else:
             left_pad = pad_length // 2

@@ -65,6 +65,7 @@ class BiT_MamSleep(nn.Module):
         x_mamba = x_mamba_f + x_mamba_b
         x_mamba = x_mamba * x_gate
         x_mamba = self.lin_out(x_mamba)
+        x_mamba = self.norm(x_mamba)
         return x_mamba
 
 

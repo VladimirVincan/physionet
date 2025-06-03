@@ -33,10 +33,10 @@ def main():
     dataloader_stride = 1
     # model = StateSpaceModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
     # model = DummyModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
-    # model = DeepSleep()
+    model = DeepSleep()
     # model = Sleep_model_MultiTarget(settings)
     # model = MambaSleepNet(settings)
-    model = MambaDeepSleep()
+    # model = MambaDeepSleep()
     model.to(settings['device'])
 
     # train_data = NormalizedPhysionetDataset('train', settings)
