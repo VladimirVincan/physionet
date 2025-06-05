@@ -305,13 +305,6 @@ class SleepNetDataset(PhysionetDataset):
                                 | arousal_signals['nrem2'].astype(bool)
                                 | arousal_signals['nrem3'].astype(bool)] = 1.
 
-        # correction according to Fig. 3:
-        sleep_stage_annotations[arousal_signals['rem'].astype(bool)
-                                | arousal_signals['nrem1'].astype(bool)
-                                | arousal_signals['nrem2'].astype(bool)
-                                | arousal_signals['nrem3'].astype(bool)] = 1.
-
-
         sleep_stage_annotations[(arousal_annotations < -0.5).astype(bool) & ~(apnea_hypopnea_annotations.astype(bool)) & sleep_stage_annotations.astype(bool)] = 0.
         sleep_stage_annotations[(arousal_annotations < -0.5).astype(bool) & apnea_hypopnea_annotations.astype(bool) & ~(sleep_stage_annotations.astype(bool))] = 1.
 

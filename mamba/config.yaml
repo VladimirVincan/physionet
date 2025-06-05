@@ -1,0 +1,22 @@
+train_dataset: "/data/physionet/dataset/train"
+val_dataset: "/data/physionet/dataset/val"
+test_dataset: "/data/physionet/dataset/test"
+summary_writer: "/out/tensorboard"
+logging_folder: "/out/"
+model_name: "/out/best_model.pt"
+csv_file: "/out/scores.csv"
+# summary_shape: "(1, 8_388_608, 13)"
+summary_shape: "(1, 5_040_000, 13)"
+# summary_shape: "(1, 65536, 13)"
+epochs: 500
+mem_snapshot_epochs: 3
+pos_weight: 10.0
+max_lr: 3e-3
+warmstart_percentage: 0.01
+num_workers: 2
+batch_size: 8
+dataloader_stride: 4
+filter_Wn: 25.0
+filter_order: 10
+pad_to_2_power_23: False
+summary_device: "cuda"

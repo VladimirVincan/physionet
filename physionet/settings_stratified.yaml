@@ -7,10 +7,24 @@ ref555_file_path: /data/physionet/ref555.npy
 # ------------
 
 
+# DeepSleep:
+# smoothing: 1e-7
+# max_lr: 1e-4
+# weight_decay: 1e-5
+# beta_1: 0.9
+# beta_2: 0.999
+
+# SleepNet:
+# smoothing: 0
+# max_lr: 1e-3
+# weight_decay: 0
+# beta_1: 0.9
+# beta_2: 0.999
+
 # training params
 device: cuda
 epochs: 200
-train_batch_size: 2
+train_batch_size: 1
 test_batch_size: 1
 pos_weight: 10.0
 max_lr: 1e-4
@@ -29,7 +43,6 @@ reduction_factor: 50
 summary_shape: "(1, 1_260_000, 12)"
 # summary_shape: "(1, 1048576, 13)"
 # ------------
-
 
 train:
   - tr05-1097

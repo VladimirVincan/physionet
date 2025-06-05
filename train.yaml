@@ -6,4 +6,4 @@ ram: 64G
 gpu:
       number: 1
 shm: 16G
-monitoring: 'aa5026c5-2fdb-4f93-b752-21879df6cf27'
+monitoring: '3c25806f-ba57-4d0c-947e-b1e1e8b1fa53'

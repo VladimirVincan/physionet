@@ -150,9 +150,10 @@ def train_loop(model, train_dataloader, validation_dataloader, settings):
     # criterion = nn.BCEWithLogitsLoss(
     #     pos_weight=torch.tensor([settings['pos_weight']])).to(
     #         settings['device'])
-    # criterion = sleep_net_loss
     criterion = nn.BCELoss().to(settings['device'])
+    # criterion = sleep_net_loss
     optimizer = optim.AdamW(model.parameters(), lr=float(settings['max_lr']), weight_decay=float(settings['weight_decay']), betas=(settings['beta_1'], settings['beta_2']))
+    # optimizer = optim.Adam(model.parameters())
     # scheduler = optim.lr_scheduler.OneCycleLR(
     #     optimizer,
     #     max_lr=float(settings['max_lr']),
