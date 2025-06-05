@@ -1,0 +1,7 @@
+model_name: DeepSleep
+max_lr: 1e-4
+weight_decay: 1e-5
+smoothing: 1e-7
+randomize_padding: False
+loss: bce
+summary_shape: "(1, 1048576, 13)"

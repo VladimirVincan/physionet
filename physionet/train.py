@@ -147,21 +147,30 @@ def validate(model, dataloader, criterion, settings, current_params,
 
 
 def train_loop(model, train_dataloader, validation_dataloader, settings):
-    # criterion = nn.BCEWithLogitsLoss(
-    #     pos_weight=torch.tensor([settings['pos_weight']])).to(
-    #         settings['device'])
-    criterion = nn.BCELoss().to(settings['device'])
-    # criterion = sleep_net_loss
-    optimizer = optim.AdamW(model.parameters(), lr=float(settings['max_lr']), weight_decay=float(settings['weight_decay']), betas=(settings['beta_1'], settings['beta_2']))
-    # optimizer = optim.Adam(model.parameters())
-    # scheduler = optim.lr_scheduler.OneCycleLR(
-    #     optimizer,
-    #     max_lr=float(settings['max_lr']),
-    #     pct_start=settings['warmstart_percentage'],
-    #     steps_per_epoch=int(len(train_dataloader)),
-    #     epochs=settings['epochs'],
-    #     anneal_strategy='linear')
-    scheduler = None
+    if settings['loss'] == 'bcewithlogits':
+        criterion = nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor([settings['pos_weight']])).to(
+                settings['device'])
+    elif settings['loss'] == 'bce':
+        criterion = nn.BCELoss().to(settings['device'])
+    elif settings['loss'] == 'sleepnet':
+        criterion = sleep_net_loss
+
+    if settings['optimizer'] == 'adamw':
+        optimizer = optim.AdamW(model.parameters(), lr=float(settings['max_lr']), weight_decay=float(settings['weight_decay']), betas=(settings['beta_1'], settings['beta_2']))
+    elif settings['optimizer'] == 'adam':
+        optimizer = optim.Adam(model.parameters())
+
+    if settings['scheduler'] == 'none':
+        scheduler = None
+    else:
+        scheduler = optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            max_lr=float(settings['max_lr']),
+            pct_start=settings['warmstart_percentage'],
+            steps_per_epoch=int(len(train_dataloader)),
+            epochs=settings['epochs'],
+            anneal_strategy='linear')
 
     current_params = {
         'total_steps': 0,

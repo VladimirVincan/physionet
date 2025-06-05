@@ -4,16 +4,17 @@ import sys
 
 import torch
 import yaml
+from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 from torchinfo import summary
 
-from dataset import (DeepSleepDataset, NormalizedPhysionetDataset,
-                     PhysionetDataset, SleepNetDataset)
 from DeepSleep import DeepSleep
+from DeepSleepDataset import DeepSleepDataset
 from dummy_model import DummyModel
 from MambaDeepSleep import MambaDeepSleep
 from MambaSleepNet import MambaSleepNet
 from SleepNet import Sleep_model_MultiTarget
+from SleepNetDataset import SleepNetDataset
 # from ssm import StateSpaceModel
 from train import train_loop
 
@@ -27,21 +28,23 @@ def main():
 
     torch.manual_seed(0)
 
-    with open(settings_name, 'r') as file:
-        settings = yaml.safe_load(file)
+    settings = OmegaConf.load(settings_name)
+    splits = OmegaConf.load(OmegaConf.to_container(settings, resolve=True)['splits_yaml'])
+    model = OmegaConf.load(OmegaConf.to_container(settings, resolve=True)['model_yaml'])
+    settings = OmegaConf.merge(settings, splits, model)
+    settings = OmegaConf.to_container(settings, resolve=True)
+    print(settings)
+    exit()
 
-    dataloader_stride = 1
-    # model = StateSpaceModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
-    # model = DummyModel("[(16, 8, 8)] + [(64, 5, 5)]", "3*[(64)]", "[(64, 1, 1)]", dataloader_stride)
-    model = DeepSleep()
-    # model = Sleep_model_MultiTarget(settings)
-    # model = MambaSleepNet(settings)
-    # model = MambaDeepSleep()
+    if settings['model_name'] == 'DeepSleep':
+        model = DeepSleep()
+    elif settings['model_name'] == 'SleepNet':
+        model = Sleep_model_MultiTarget(settings)
+    elif settings['model_name'] == 'MambaSleepNet':
+        model = MambaSleepNet(settings)
+    elif settings['model_name'] == 'SleepNet':
+        model = MambaDeepSleep()
     model.to(settings['device'])
-
-    # train_data = NormalizedPhysionetDataset('train', settings)
-    # validation_data = NormalizedPhysionetDataset('validation', settings)
-    # test_data = PhysionetDataset('test', settings)
 
     if model.name == 'DeepSleep':
         train_data = DeepSleepDataset('train', settings)
