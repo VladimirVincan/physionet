@@ -1,5 +1,5 @@
 splits_yaml: physionet/unstratified.yaml
-model_yaml: physionet/DeepSleep.yaml
+model_yaml: physionet/DeepSleepBest.yaml
 
 # paths
 folder_dir: /data/physionet/challenge-2018/training

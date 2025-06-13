@@ -61,8 +61,10 @@ class DeepSleepDataset(PhysionetDataset):
     def preprocess_input_signals(self, input_signals):
 
         # input_signals = self.clip(input_signals)
-        self.quantile_normalization(input_signals)
-        # input_signals = self.gaussian_normalization(input_signals)
+        if self.settings['normalization'] == 'quantile':
+            self.quantile_normalization(input_signals)
+        elif self.settings['normalization'] == 'gaussian':
+            input_signals = self.gaussian_normalization(input_signals)
         input_signals = self.randomize_magnitude(input_signals)
         input_signals = self.randomize_padding(input_signals)
         input_signals = input_signals.astype(np.float32)
