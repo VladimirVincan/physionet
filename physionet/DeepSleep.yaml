@@ -1,7 +1,12 @@
 model_name: DeepSleep
-max_lr: 1e-4
-weight_decay: 1e-5
 smoothing: 1e-7
 randomize_padding: False
 loss: bce
 summary_shape: "(1, 1048576, 13)"
+ref555_file_path: /data/physionet/ref555.npy
+
+optimizer: adamw
+max_lr: 1e-4
+beta_1: 0.9
+beta_2: 0.999
+weight_decay: 1e-5

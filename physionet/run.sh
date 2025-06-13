@@ -7,7 +7,7 @@ pip install einops
 pip install transformers
 pip install dotenv
 pip install wfdb
-pip isntall matplotlib
+pip install matplotlib
 pip install scikit-learn
 pip install omegaconf
 

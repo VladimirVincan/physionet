@@ -1,9 +1,9 @@
-model_name: MambaSleepNet
+
 num_channels: 12
 reduction_factor: 50
 loss: sleepnet
 summary_shape: "(1, 1_260_000, 12)"
 
-optimizer: adam
+optimizer: adamw
 max_lr: 1e-3
-weight_decay: 0
+weight_decay: 1e-5

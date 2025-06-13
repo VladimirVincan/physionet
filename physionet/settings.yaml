@@ -1,5 +1,5 @@
-splits_yaml: stratified.yaml
-model_yaml: DeepSleep.yaml
+splits_yaml: physionet/unstratified.yaml
+model_yaml: physionet/DeepSleep.yaml
 
 # paths
 folder_dir: /data/physionet/challenge-2018/training
@@ -15,7 +15,6 @@ train_batch_size: 2
 test_batch_size: 1
 num_workers: 8
 scheduler: none
-optimizer: adamw
 # ------------
 
 # testing only locally.

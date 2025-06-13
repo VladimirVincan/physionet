@@ -33,8 +33,6 @@ def main():
     model = OmegaConf.load(OmegaConf.to_container(settings, resolve=True)['model_yaml'])
     settings = OmegaConf.merge(settings, splits, model)
     settings = OmegaConf.to_container(settings, resolve=True)
-    print(settings)
-    exit()
 
     if settings['model_name'] == 'DeepSleep':
         model = DeepSleep()
@@ -49,17 +47,15 @@ def main():
     if model.name == 'DeepSleep':
         train_data = DeepSleepDataset('train', settings)
         validation_data = DeepSleepDataset('validation', settings)
-        summary_shape = (1, 1048576, 13)
     elif model.name == 'SleepNet':
         train_data = SleepNetDataset('train', settings)
         validation_data = SleepNetDataset('validation', settings)
-        summary_shape = (1, 1_260_000, 12)
 
     train_dataloader = DataLoader(train_data, batch_size=settings['train_batch_size'], shuffle=True, num_workers=settings['num_workers'])
     validation_dataloader = DataLoader(validation_data, batch_size=settings['test_batch_size'], shuffle=True, num_workers=settings['num_workers'])
 
     summary(model,
-            summary_shape,
+            eval(settings['summary_shape']),
             device=settings['device'],
             verbose=1,
             depth=5,
