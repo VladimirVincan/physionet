@@ -28,9 +28,9 @@ def sleep_net_loss(predictions, truths, settings):
     apnea_hypopnea_outputs = apnea_hypopnea_outputs.permute(0, 2, 1).contiguous().view(-1, 2)
     sleep_stage_outputs = sleep_stage_outputs.permute(0, 2, 1).contiguous().view(-1, 2)
 
-    arousal_loss = arousal_criterion(arousal_outputs, batch_arousal_targs)
-    apnea_hypopnea_loss = apnea_criterion(apnea_hypopnea_outputs, batch_apnea_targs)
-    sleep_stage_loss = wake_criterion(sleep_stage_outputs, batch_wake_targs)
+    arousal_loss = arousal_criterion(arousal_outputs, batch_arousal_targs.long())
+    apnea_hypopnea_loss = apnea_criterion(apnea_hypopnea_outputs, batch_apnea_targs.long())
+    sleep_stage_loss = wake_criterion(sleep_stage_outputs, batch_wake_targs.long())
 
     loss = ((2*arousal_loss) + apnea_hypopnea_loss + sleep_stage_loss) / 4.0
 

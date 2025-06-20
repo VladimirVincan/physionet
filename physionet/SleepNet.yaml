@@ -1,4 +1,4 @@
-model_name: MambaSleepNet
+model_name: SleepNet
 num_channels: 12
 reduction_factor: 50
 loss: sleepnet
