@@ -6,4 +6,6 @@ summary_shape: "(1, 1_260_000, 12)"
 
 optimizer: adam
 max_lr: 1e-3
+beta_1: 0.9
+beta_2: 0.999
 weight_decay: 0

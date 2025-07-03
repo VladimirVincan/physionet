@@ -1,5 +1,5 @@
-splits_yaml: physionet/unstratified.yaml
-model_yaml: physionet/DeepSleepBest.yaml
+splits_yaml: physionet/stratified.yaml
+model_yaml: physionet/DresdenDeepSleep.yaml
 
 # paths
 folder_dir: /data/physionet/challenge-2018/training
@@ -11,7 +11,7 @@ model_name: "/out/best_model.pt"
 # training params
 device: cuda
 epochs: 200
-train_batch_size: 2
+train_batch_size: 1
 test_batch_size: 1
 num_workers: 8
 scheduler: none

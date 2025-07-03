@@ -57,7 +57,34 @@ class SkipMamba(nn.Module):
         return y
 
 
+class BiMambaBlock(nn.Module):
+    def __init__(self, in_channels, settings, out_channels=4, hiddenSize=32):
+        super().__init__()
+
+        self.bimamba1 = BiMamba(input_dim=in_channels, hidden_dim=hiddenSize).to(settings['device'])
+        self.bimamba2 = BiMamba(input_dim=hidden_channels, hidden_dim=hiddenSize).to(settings['device'])
+        self.bimamba3 = BiMamba(input_dim=hidden_channels, hidden_dim=hiddenSize).to(settings['device'])
+        self.bimamba4 = BiMamba(input_dim=hidden_channels, hidden_dim=hiddenSize).to(settings['device'])
+        self.bimamba5 = BiMamba(input_dim=hidden_channels, hidden_dim=hiddenSize).to(settings['device'])
+        self.bimamba6 = BiMamba(input_dim=hidden_channels, hidden_dim=hiddenSize).to(settings['device'])
+
+        self.output = nn.Linear(hiddenSize, out_channels)
+
+    def forward(self, x):
+        x = self.bimamba1(x)
+        x = self.bimamba2(x)
+        x = self.bimamba3(x)
+        x = self.bimamba4(x)
+        x = self.bimamba5(x)
+        x = self.bimamba6(x)
+        x = self.output(x)
+        x = torch.sigmoid(x)
+
+        return x
+
+
 class MambaSleepNet(Sleep_model_MultiTarget):
     def __init__(self, settings, num_signals=12):
         super().__init__(settings, num_signals)
-        self.skipLSTM = SkipMamba(((14*self.channelMultiplier)+1)*self.numSignals, settings=settings, hiddenSize=self.channelMultiplier*64, out_channels=4)
+        # self.skipLSTM = SkipMamba(((14*self.channelMultiplier)+1)*self.numSignals, settings=settings, hiddenSize=self.channelMultiplier*64, out_channels=4)
+        self.skipLSTM = BiMambaBlock(((14*self.channelMultiplier)+1)*self.numSignals, settings=settings, hiddenSize=self.channelMultiplier*64, out_channels=4)

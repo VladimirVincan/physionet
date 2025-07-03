@@ -2,8 +2,8 @@ account: vladimir.vincan.ivi
 datasets: ['87442793-7a29-406f-8a46-9eefe3783828']
 experiment: physionet
 cpu: 16
-ram: 64G
 gpu:
       number: 1
+ram: 64G
 shm: 16G
-monitoring: '3c25806f-ba57-4d0c-947e-b1e1e8b1fa53'
+monitoring: '253dc372-ef8d-4397-966d-35630e18bf3f'
