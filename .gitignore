@@ -22,5 +22,6 @@ graph/*
 physionet/tensorboard/*
 scripts/*/*
 scripts/*.zip
+physionet/DresdenDeepSleep
 
 Physionet_PointFiveFour/
