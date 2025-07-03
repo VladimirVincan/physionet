@@ -10,9 +10,11 @@ from torchinfo import summary
 
 from DeepSleep import DeepSleep
 from DeepSleepDataset import DeepSleepDataset
+from DresdenDeepSleep import DresdenDeepSleep
+from DresdenDeepSleepDataset import DresdenDeepSleepDataset
 from dummy_model import DummyModel
-from MambaDeepSleep import MambaDeepSleep
-from MambaSleepNet import MambaSleepNet
+# from MambaDeepSleep import MambaDeepSleep
+# from MambaSleepNet import MambaSleepNet
 from SleepNet import Sleep_model_MultiTarget
 from SleepNetDataset import SleepNetDataset
 # from ssm import StateSpaceModel
@@ -36,6 +38,8 @@ def main():
 
     if settings['model_name'] == 'DeepSleep':
         model = DeepSleep()
+    elif settings['model_name'] == 'DresdenDeepSleep':
+        model = DresdenDeepSleep()
     elif settings['model_name'] == 'SleepNet':
         model = Sleep_model_MultiTarget(settings)
     elif settings['model_name'] == 'MambaSleepNet':
@@ -47,6 +51,9 @@ def main():
     if model.name == 'DeepSleep':
         train_data = DeepSleepDataset('train', settings)
         validation_data = DeepSleepDataset('validation', settings)
+    elif model.name == 'DresdenDeepSleep':
+        train_data = DresdenDeepSleepDataset('train', settings)
+        validation_data = DresdenDeepSleepDataset('validation', settings)
     elif model.name == 'SleepNet':
         train_data = SleepNetDataset('train', settings)
         validation_data = SleepNetDataset('validation', settings)

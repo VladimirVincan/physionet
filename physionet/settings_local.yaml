@@ -1,8 +1,8 @@
-splits_yaml: physionet/local.yaml
-model_yaml: physionet/SleepNet.yaml
+splits_yaml: local.yaml
+model_yaml: DresdenDeepSleep.yaml
 
 # paths
-folder_dir: challenge-2018/training
+folder_dir: ../challenge-2018/training
 output_path: out
 summary_writer: "tensorboard"
 # ------------

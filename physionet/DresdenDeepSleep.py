@@ -8,7 +8,7 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.block = nn.Sequential(
             nn.Conv1d(in_channels, hidden_channels, kernel_size, padding='same'),
-            nn.BatchNorm1d(out_channels),
+            nn.BatchNorm1d(hidden_channels),
             nn.ReLU(inplace=True),
             nn.Conv1d(hidden_channels, out_channels, kernel_size, padding='same'),
             nn.BatchNorm1d(out_channels),
@@ -22,7 +22,7 @@ class ConvBlock(nn.Module):
 class DresdenDeepSleep(nn.Module):
     def __init__(self, in_channels=3, out_channels=1):
         super().__init__()
-        self.name = 'DeepSleep'
+        self.name = 'DresdenDeepSleep'
         # Downsampling
         self.enc1 = ConvBlock(in_channels, 20, 20)
         self.enc2 = ConvBlock(20, 25, 25)
@@ -50,12 +50,14 @@ class DresdenDeepSleep(nn.Module):
         self.dec1 = ConvBlock(41, 23, 21)
 
         # output
-        self.output = nn.Sequential(
-            nn.Conv1d(21, 2, 1, padding='same'),
-            nn.Sigmoid()
-        )
+        self.output = nn.Conv1d(21, 1, 1, padding='same')
+        # self.output = nn.Sequential(
+        #     nn.Conv1d(21, 2, 1, padding='same'),
+        #     nn.Sigmoid()
+        # )
 
-    def forward(self, x):
+    # start and end are used in eval if signal was padded
+    def forward(self, x, start=0, end=2_097_152):
         x = x.permute(0, 2, 1)  # B x N x 13 -> B x 13 x N
 
         # Encoder
@@ -86,9 +88,11 @@ class DresdenDeepSleep(nn.Module):
         d1 = self.upsample(d2)
         d1 = self.dec1(torch.cat([d1, e1], dim=1))
 
-        # if not self.train:
         out = self.output(d1)
-        # out = d1
-        out = out.squeeze(1)  # B x 1 x N -> B x N
 
+        if not self.training:
+            out = torch.nn.functional.upsample(out, scale_factor=4, mode='linear')
+            out = out[start*4 : (end+1)*4]
+
+        out = out.squeeze(1)  # B x 1 x N -> B x N
         return out

@@ -93,7 +93,11 @@ def validate(model, dataloader, criterion, settings, current_params,
 
     with torch.no_grad():
         for batch_idx, _data in enumerate(dataloader):
-            inputs, labels, _, num_samples = _data
+            inputs, labels, metadata = _data
+            num_samples = metadata['num_samples']
+            start_signal_pos = metadata['left_pad']
+            end_signal_pos = metadata['right_pad']
+
             inputs = inputs.to(settings['device'])
             if model.name != 'SleepNet':
                 labels = labels.to(settings['device'])
@@ -107,6 +111,7 @@ def validate(model, dataloader, criterion, settings, current_params,
                 outputs = outputs[0][:, 1]
             else:
                 mask = create_mask(labels)
+                outputs = outputs[:, start_signal_pos*4:outputs.shape[1]-end_signal_pos*4]
                 loss = criterion(outputs[mask], labels[mask])
             val_loss += loss
 

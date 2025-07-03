@@ -23,14 +23,20 @@ class PhysionetDataset(Dataset):
         num_samples = output_signal.shape[0]  # (N, 1) -> N
         arousal_signals = import_arousal(filepaths_dict['wfdb_path'], num_samples)
 
-        input_signals = self.preprocess_input_signals(input_signals)
+        input_signals, left_pad, right_pad = self.preprocess_input_signals(input_signals)
         output_signals = self.combine_outputs(output_signal, arousal_signals)
 
         if self.return_arousal_signals:
             arousal_signals = self.preprocess_arousal_signals(arousal_signals)
             return input_signals, output_signals, arousal_signals
         elif self.split == 'test' or self.split == 'validation':
-            return input_signals, output_signals, filepaths_dict, num_samples
+            metadata = {
+                'left_pad': left_pad,
+                'right_pad': right_pad,
+                'filepaths_dict': filepaths_dict,
+                'num_samples': num_samples
+            }
+            return input_signals, output_signals, metadata
         # elif self.split == 'validation':
         #     return input_signals, output_signals, num_samples
         return input_signals, output_signals

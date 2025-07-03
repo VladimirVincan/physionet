@@ -32,7 +32,7 @@ class DeepSleepDataset(PhysionetDataset):
         right_pad = pad_length - left_pad
         input_signals = np.pad(input_signals, ((left_pad, right_pad), (0, 0)), mode='constant')
         self.left_pad = left_pad
-        return input_signals
+        return input_signals, left_pad, signal_length + left_pad
 
     def gaussian_normalization(self, input_signals):
         mean = np.mean(input_signals, axis=0)
